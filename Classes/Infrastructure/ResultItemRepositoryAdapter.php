@@ -93,13 +93,22 @@ class ResultItemRepositoryAdapter extends Repository implements ResultItemReposi
 
         if ($existingResultItem instanceof ResultItem) {
             $existingResultItem->mergeFrom($resultItem);
-            $this->resultItemsByFingerprint[$fingerprint] = $existingResultItem;
+            // Re-index by the current fingerprint, as mergeFrom() may enrich
+            // identity-relevant fields and recompute it.
+            $this->resultItemsByFingerprint[$existingResultItem->getFingerprint()] = $existingResultItem;
             $this->update($existingResultItem);
+            $this->persistenceManager->persistAll();
             return;
         }
 
         $this->resultItemsByFingerprint[$fingerprint] = $resultItem;
         parent::add($resultItem);
+        // Persist immediately so the unique fingerprint is enforced incrementally:
+        // findOneByFingerprint() only sees flushed rows, so without this a later
+        // result with the same fingerprint (e.g. two URLs that normalize equally)
+        // would schedule a second insert and violate the unique index on flush.
+        // add() is only called for broken links, so the number of flushes stays small.
+        $this->persistenceManager->persistAll();
     }
 
     private function findOneByFingerprint(string $fingerprint, bool $cacheResult = false): ?ResultItem

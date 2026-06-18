@@ -49,8 +49,7 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
             return;
         }
 
-        foreach ($this->resultItemsGroupedByStatusCode as $statusCode => $urls) {
-            $count = \count($urls);
+        foreach ($this->resultItemsGroupedByStatusCode as $statusCode => $count) {
             if ($statusCode < 100) {
                 $this->outputLine("$count url(s) did have unresponsive host(s)");
                 continue;
@@ -63,8 +62,8 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
     public function getErrorCount(): int
     {
         $errorCount = 0;
-        foreach ($this->resultItemsGroupedByStatusCode as $statusCode => $urls) {
-            $errorCount += \count($urls);
+        foreach ($this->resultItemsGroupedByStatusCode as $count) {
+            $errorCount += $count;
         }
         return $errorCount;
     }
@@ -165,7 +164,7 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
             $this->outputLine("Could not persist entry for the url {$crawlingUrl}");
         }
 
-        $this->resultItemsGroupedByStatusCode[$statusCode][] = $linkCheckItem;
+        $this->resultItemsGroupedByStatusCode[$statusCode] = ($this->resultItemsGroupedByStatusCode[$statusCode] ?? 0) + 1;
     }
 
     /**

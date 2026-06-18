@@ -22,6 +22,7 @@ use Neos\Flow\Cli\Exception\StopCommandException;
 use Neos\Flow\Http\BaseUriProvider;
 use Neos\Flow\I18n\Translator;
 use Neos\Flow\Mvc;
+use Neos\Flow\Persistence\PersistenceManagerInterface;
 use Neos\Neos\Domain\Service\ContentContext;
 use Neos\Utility\ObjectAccess;
 use Psr\Http\Message\UriInterface;
@@ -84,6 +85,12 @@ class CheckLinksCommandController extends CommandController
      * @Flow\Inject(lazy=false)
      */
     protected $baseUriProvider;
+
+    /**
+     * @var PersistenceManagerInterface
+     * @Flow\Inject
+     */
+    protected $persistenceManager;
 
     /**
      * Clear all stored errors
@@ -176,6 +183,11 @@ class CheckLinksCommandController extends CommandController
                 $this->output->outputFormatted('<error>' . $message . '</error>');
             }
             $this->output->outputLine(sprintf("Problems for domain %s: %s", $domainToCrawl->__toString(), \count($messages)));
+
+            $this->persistenceManager->persistAll();
+            $subgraph->getFirstLevelNodeCache()->flush();
+            unset($subgraph, $messages);
+            gc_collect_cycles();
         }
 
         if ($restoreBaseUriProviderSingleton) {
@@ -186,11 +198,10 @@ class CheckLinksCommandController extends CommandController
     private function crawlExternalCommandImplementation(array $domainsToCrawl, int &$errorCount): void
     {
         $crawlProfile = new CrawlNonExcludedUrls();
-        $crawlObserver = new LogAndPersistResultCrawlObserver();
-
-        $crawler = $this->webCrawlerFactory->createCrawler($crawlProfile, $crawlObserver);
 
         foreach ($domainsToCrawl as $domainToCrawl) {
+            $crawlObserver = new LogAndPersistResultCrawlObserver();
+            $crawler = $this->webCrawlerFactory->createCrawler($crawlProfile, $crawlObserver);
             $url = $this->uriFactory->createFromDomain($domainToCrawl);
 
             try {
@@ -207,6 +218,10 @@ class CheckLinksCommandController extends CommandController
                 }
             } catch (\InvalidArgumentException $exception) {
                 $this->outputLine('ERROR:  ' . $exception->getMessage());
+            } finally {
+                $this->persistenceManager->persistAll();
+                unset($crawler, $crawlObserver);
+                gc_collect_cycles();
             }
         }
     }
