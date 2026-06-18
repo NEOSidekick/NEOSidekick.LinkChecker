@@ -6,12 +6,12 @@ prototype(NEOSidekick.LinkChecker:Component.Links.List) < prototype(Neos.Fusion:
         <table data-sort-table class="neos-table codeq-link-checker-table">
             <thead>
                 <tr>
-                    <th data-sort-column>{I18n.translate('NEOSidekick.LinkChecker:Modules:domain')}</th>
-                    <th data-sort-column>{I18n.translate('NEOSidekick.LinkChecker:Modules:source')}</th>
-                    <th>{I18n.translate('NEOSidekick.LinkChecker:Modules:targetUriPath')}</th>
-                    <th>{I18n.translate('NEOSidekick.LinkChecker:Modules:error')}</th>
-                    <th>{I18n.translate('NEOSidekick.LinkChecker:Modules:foundAt')}</th>
-                    <th></th>
+                    <th class="link-checker-table__domain" data-sort-column>{I18n.translate('NEOSidekick.LinkChecker:Modules:domain')}</th>
+                    <th class="link-checker-table__source" data-sort-column>{I18n.translate('NEOSidekick.LinkChecker:Modules:source')}</th>
+                    <th class="link-checker-table__target">{I18n.translate('NEOSidekick.LinkChecker:Modules:targetUriPath')}</th>
+                    <th class="link-checker-table__status">{I18n.translate('NEOSidekick.LinkChecker:Modules:error')}</th>
+                    <th class="link-checker-table__date">{I18n.translate('NEOSidekick.LinkChecker:Modules:foundAt')}</th>
+                    <th class="link-checker-table__actions"></th>
                 </tr>
             </thead>
             <tbody>
@@ -25,123 +25,47 @@ prototype(NEOSidekick.LinkChecker:Component.Links.List) < prototype(Neos.Fusion:
 }
 
 prototype(NEOSidekick.LinkChecker:Component.Links.List.Link) < prototype(Neos.Fusion:Component) {
-    links = ${{}}
-
-    sourcePath = Neos.Fusion:Case {
-        isNode {
-            condition = ${String.startsWith(link.sourcePath, '/sites')}
-
-            // its hacky that we dont use a proper breadcrumb rendering here,
-            // but for that we need best need to go full php in terms of integrations
-            renderer = Sitegeist.FusionLinkPrototypes:ActionUri {
-                package = 'Neos.Neos'
-                controller = 'Frontend\\Node'
-                action = 'show'
-                arguments.node = ${link.sourcePath}
-
-                @process.removeLeadingProtocoll = ${String.replace(value, ["https://", "http://"], "")}
-                @process.removeLeadingSlash = ${String.trim(value, '/')}
-                @process.replaceSlashWithArrow = ${String.replace(value, '/', ' > ')}
-            }
-        }
-
-        isExternal {
-            condition = ${String.startsWith(link.sourcePath, 'http')}
-            // thanks to: https://stackoverflow.com/a/441771
-            renderer = ${String.pregReplace(link.sourcePath, '#(https?://[^/]*)(/.*)#', '$2')}
-        }
-
-        fallback {
-            condition = ${true}
-            renderer = '#'
-        }
-    }
-
-    sourceLinkToEditNode = Sitegeist.FusionLinkPrototypes:ActionUri {
-        package = 'Neos.Neos.Ui'
-        controller = 'Backend'
-        action = 'index'
-        arguments.node = ${link.sourcePath + '@' + Neos.Ui.Workspace.getPersonalWorkspace()['name']}
-    }
-
-    frontendUrl = Neos.Fusion:Case {
-        isNode {
-            condition = ${String.startsWith(link.sourcePath, '/sites')}
-
-            renderer = Sitegeist.FusionLinkPrototypes:ActionUri {
-                package = 'Neos.Neos'
-                controller = 'Frontend\\Node'
-                action = 'show'
-                arguments.node = ${link.sourcePath}
-            }
-        }
-
-        isExternal {
-            condition = ${String.startsWith(link.sourcePath, 'http')}
-
-            renderer = ${link.sourcePath}
-        }
-
-        fallback {
-            condition = ${true}
-            renderer = '#'
-        }
-    }
-
-    targetLinkToEditNodeOrExternalLink = Neos.Fusion:Case {
-        isNode {
-            condition = ${String.startsWith(link.target, 'node://') && link.targetPath}
-
-            renderer = Sitegeist.FusionLinkPrototypes:ActionUri {
-                package = 'Neos.Neos.Ui'
-                controller = 'Backend'
-                action = 'index'
-                arguments.node = ${link.targetPath + '@' + Neos.Ui.Workspace.getPersonalWorkspace()['name']}
-
-                @process.replaceBaseUri = ${String.replace(value, request.httpRequest.uri, link.domain)}
-            }
-        }
-
-        isExternal {
-            condition = ${String.startsWith(link.target, 'http')}
-
-            renderer = ${link.target}
-        }
-    }
+    link = null
 
     deleteUri = Neos.Fusion:UriBuilder {
         action = 'delete'
-        arguments.resultItem = ${link}
+        arguments.resultItem = ${link.resultItem}
     }
     ignoreUri = Neos.Fusion:UriBuilder {
         action = 'ignore'
-        arguments.resultItem = ${link}
+        arguments.resultItem = ${link.resultItem}
     }
 
     renderer = afx`
         <tr>
-            <td>{link.domain}</td>
-            <td>
-                {props.sourcePath}
-                <a @if={String.startsWith(link.sourcePath, '/sites')} href={props.sourceLinkToEditNode} target="_blank" class="neos-button neos-button--small">
-                    <i class="fas fa-edit"></i>
-                </a>
-                <a href={props.frontendUrl} target="_blank" class="neos-button neos-button--small">
-                    <i class="fas fa-external-link-alt"></i>
-                </a>
+            <td class="link-checker-table__domain">
+                <span class="link-checker-table__text" title={link.domain}>{link.domain}</span>
             </td>
-            <td>
-                <Neos.Fusion:Fragment @if.has={props.targetLinkToEditNodeOrExternalLink}>
-                    <span class="target-page-text">{link.targetPageTitle || link.target}</span>
-                    <a href={props.targetLinkToEditNodeOrExternalLink} target="_blank" class="neos-button neos-button--small">
+            <td class="link-checker-table__source">
+                <div class="link-checker-table__cell-content">
+                    <span class="link-checker-table__text" title={link.sourceLabel}>{link.sourceLabel}</span>
+                    <a @if={link.sourceEditUri} href={link.sourceEditUri} target="_blank" class="neos-button neos-button--small">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <a href={link.sourceFrontendUri} target="_blank" class="neos-button neos-button--small">
                         <i class="fas fa-external-link-alt"></i>
                     </a>
-                </Neos.Fusion:Fragment>
-                <span @if.not={!props.targetLinkToEditNodeOrExternalLink}>{link.target}</span>
+                </div>
             </td>
-            <td>{I18n.translate('NEOSidekick.LinkChecker:Modules:error.' + link.statusCode)}</td>
-            <td>{Date.format(link.checkedAt, 'd.m.Y H:i')}</td>
-            <td class="neos-action">
+            <td class="link-checker-table__target">
+                <div class="link-checker-table__cell-content">
+                    <Neos.Fusion:Fragment @if={link.targetUri}>
+                        <span class="link-checker-table__text" title={link.targetLabel}>{link.targetLabel}</span>
+                        <a href={link.targetUri} target="_blank" class="neos-button neos-button--small">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </Neos.Fusion:Fragment>
+                    <span class="link-checker-table__text" title={link.targetFallbackLabel} @if={!link.targetUri}>{link.targetFallbackLabel}</span>
+                </div>
+            </td>
+            <td class="link-checker-table__status">{I18n.translate('NEOSidekick.LinkChecker:Modules:error.' + link.statusCode)}</td>
+            <td class="link-checker-table__date">{Date.format(link.checkedAt, 'd.m.Y H:i')}</td>
+            <td class="neos-action link-checker-table__actions">
                 <div class="neos-pull-right">
                     <Neos.Fusion.Form:Form form.target={props.deleteUri} attributes.class="neos-inline">
                         <Neos.Fusion.Form:Button

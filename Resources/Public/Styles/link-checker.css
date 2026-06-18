@@ -1,14 +1,66 @@
+.codeq-link-checker-table {
+    table-layout: fixed;
+    width: 100%;
+    max-width: 100%;
+}
+
+.codeq-link-checker-table th,
+.codeq-link-checker-table td {
+    min-width: 0;
+    vertical-align: top;
+}
+
+.codeq-link-checker-table .link-checker-table__domain {
+    width: 12%;
+}
+
+.codeq-link-checker-table .link-checker-table__source {
+    width: 35%;
+}
+
+.codeq-link-checker-table .link-checker-table__target {
+    width: 27%;
+}
+
+.codeq-link-checker-table .link-checker-table__status {
+    width: 13%;
+}
+
+.codeq-link-checker-table .link-checker-table__date {
+    width: 8%;
+}
+
+.codeq-link-checker-table .link-checker-table__actions {
+    width: 5%;
+}
+
+.codeq-link-checker-table .link-checker-table__cell-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+}
+
+.codeq-link-checker-table .link-checker-table__text {
+    display: inline-block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: top;
+}
+
+.codeq-link-checker-table .link-checker-table__cell-content .link-checker-table__text {
+    flex: 0 1 auto;
+}
+
 .codeq-link-checker-table .neos-button.neos-button--small {
+    flex: 0 0 auto;
     padding-left: 8px;
     padding-right: 8px;
 }
-.codeq-link-checker-table .target-page-text {
-    display: inline-block;
-    max-width: 300px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-}
+
 .codeq-link-checker-table .neos-action {
-    width: 46px;
+    width: 5%;
 }

@@ -6,15 +6,12 @@ namespace NEOSidekick\LinkChecker\Controller\Backend;
 
 use NEOSidekick\LinkChecker\Domain\Model\ResultItem;
 use NEOSidekick\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
+use NEOSidekick\LinkChecker\Presentation\ResultItemViewFactory;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\Core\Booting\Scripts;
-use Neos\Flow\I18n\Translator;
 use Neos\Fusion\View\FusionView;
 use Neos\Neos\Controller\Module\AbstractModuleController;
-use Neos\Neos\Service\LinkingService;
 
 /**
  * @Flow\Scope("singleton")
@@ -24,22 +21,10 @@ class ModuleController extends AbstractModuleController
     protected $defaultViewObjectName = FusionView::class;
 
     /**
-     * @var Translator
-     * @Flow\Inject
-     */
-    protected $translator;
-
-    /**
      * @var ResultItemRepositoryInterface
      * @Flow\Inject
      */
     protected $resultItemRepository;
-
-    /**
-     * @var ContextFactoryInterface
-     * @Flow\Inject
-     */
-    protected $contextFactory;
 
     /**
      * @var ConfigurationManager
@@ -47,18 +32,21 @@ class ModuleController extends AbstractModuleController
      */
     protected $configurationManager;
 
+    /**
+     * @var ResultItemViewFactory
+     * @Flow\Inject
+     */
+    protected $resultItemViewFactory;
+
     public function indexAction(): void
     {
         $resultItems = $this->resultItemRepository->findAll();
         $flashMessages = $this->controllerContext->getFlashMessageContainer()->getMessagesAndFlush();
 
-        $resultItems = array_map(function (ResultItem $resultItem) {
-            $target = $resultItem->getTarget();
-            if (str_starts_with($target, 'node://')) {
-                $this->injectPageTitleInResultItem($resultItem, $target);
-            }
-            return $resultItem;
-        }, $resultItems->toArray());
+        $resultItems = array_map(
+            fn (ResultItem $resultItem) => $this->resultItemViewFactory->create($resultItem, $this->controllerContext),
+            $resultItems->toArray()
+        );
 
         $this->view->assignMultiple([
             'links' => $resultItems,
@@ -87,24 +75,5 @@ class ModuleController extends AbstractModuleController
 
         $this->addFlashMessage(sprintf('%s ignored', $resultItem->getSource()));
         $this->redirect('index');
-    }
-
-    private function injectPageTitleInResultItem(ResultItem $resultItem, string $target): void
-    {
-        preg_match(LinkingService::PATTERN_SUPPORTED_URIS, $target, $matches);
-        $nodeIdentifier = $matches[2];
-
-        $baseContext = $this->contextFactory->create([
-            'workspaceName' => 'live',
-            'invisibleContentShown' => true,
-            'inaccessibleContentShown' => true
-        ]);
-        $targetNode = $baseContext->getNodeByIdentifier($nodeIdentifier);
-
-        if (!($targetNode instanceof NodeInterface)) {
-            return;
-        }
-
-        $resultItem->setTargetPageTitle($targetNode->getProperty('title'));
     }
 }
