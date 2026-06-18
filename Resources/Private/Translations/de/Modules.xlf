@@ -3,10 +3,10 @@
     <file original="" product-name="NEOSidekick.LinkChecker" source-language="de" datatype="plaintext">
         <body>
             <trans-unit id="module.label">
-                <source>Link Überprüfung</source>
+                <source>Link-Überprüfung</source>
             </trans-unit>
             <trans-unit id="module.description">
-                <source>Dieses Module listet fehlerhafte Links auf.</source>
+                <source>Dieses Modul listet fehlerhafte Links auf.</source>
             </trans-unit>
 
             <trans-unit id="pagination.position">
@@ -21,25 +21,25 @@
             </trans-unit>
 
             <trans-unit id="domain">
-                <source>Ursprungsdomäne</source>
+                <source>Ursprungsdomain</source>
             </trans-unit>
             <trans-unit id="source">
                 <source>Quellpfad</source>
             </trans-unit>
             <trans-unit id="targetUriPath">
-                <source>Ziel-Url oder Pfad</source>
+                <source>Ziel-URL oder Pfad</source>
             </trans-unit>
             <trans-unit id="error">
                 <source>Fehler</source>
             </trans-unit>
             <trans-unit id="error.0">
-                <source>Timeout (0)</source>
+                <source>Zeitüberschreitung (0)</source>
             </trans-unit>
             <trans-unit id="error.301">
                 <source>Dauerhaft verschoben (301)</source>
             </trans-unit>
             <trans-unit id="error.302">
-                <source>Found (Moved Temporarily) (302)</source>
+                <source>Gefunden (vorübergehend verschoben) (302)</source>
             </trans-unit>
             <trans-unit id="error.303">
                 <source>Siehe anderswo (303)</source>
@@ -88,7 +88,7 @@
             </trans-unit>
 
             <trans-unit id="action.run">
-                <source>Neue überprüfen und zurücksetzen</source>
+                <source>Erneut überprüfen und zurücksetzen</source>
             </trans-unit>
 
             <trans-unit id="list.empty">

@@ -36,52 +36,52 @@
                 <source>Timeout (0)</source>
             </trans-unit>
             <trans-unit id="error.301">
-                <source>Dauerhaft verschoben (301)</source>
+                <source>Moved Permanently (301)</source>
             </trans-unit>
             <trans-unit id="error.302">
                 <source>Found (Moved Temporarily) (302)</source>
             </trans-unit>
             <trans-unit id="error.303">
-                <source>Siehe anderswo (303)</source>
+                <source>See Other (303)</source>
             </trans-unit>
             <trans-unit id="error.307">
-                <source>Zeitweise Umleitung (307)</source>
+                <source>Temporary Redirect (307)</source>
             </trans-unit>
             <trans-unit id="error.308">
-                <source>Dauerhafte Umleitung (308)</source>
+                <source>Permanent Redirect (308)</source>
             </trans-unit>
             <trans-unit id="error.400">
-                <source>Ungültige Anfrage (400)</source>
+                <source>Bad Request (400)</source>
             </trans-unit>
             <trans-unit id="error.401">
-                <source>Unautorisiert (401)</source>
+                <source>Unauthorized (401)</source>
             </trans-unit>
             <trans-unit id="error.403">
-                <source>Verboten (403)</source>
+                <source>Forbidden (403)</source>
             </trans-unit>
             <trans-unit id="error.404">
-                <source>Nicht gefunden (404)</source>
+                <source>Not Found (404)</source>
             </trans-unit>
             <trans-unit id="error.405">
-                <source>Methode nicht erlaubt (405)</source>
+                <source>Method Not Allowed (405)</source>
             </trans-unit>
             <trans-unit id="error.408">
-                <source>Anfrage-Zeitüberschreitung (408)</source>
+                <source>Request Timeout (408)</source>
             </trans-unit>
             <trans-unit id="error.429">
-                <source>Zu viele Anfragen (429)</source>
+                <source>Too Many Requests (429)</source>
             </trans-unit>
             <trans-unit id="error.490">
-                <source>Telefonnummern sollten im internationalen Format angegeben werden (490)</source>
+                <source>Phone numbers should be specified in international format (490)</source>
             </trans-unit>
             <trans-unit id="error.500">
-                <source>Interner Server-Fehler (500)</source>
+                <source>Internal Server Error (500)</source>
             </trans-unit>
             <trans-unit id="error.503">
-                <source>Dienst nicht verfügbar (503)</source>
+                <source>Service Unavailable (503)</source>
             </trans-unit>
             <trans-unit id="error.509">
-                <source>Datenvolumen überschritten (509)</source>
+                <source>Bandwidth Limit Exceeded (509)</source>
             </trans-unit>
             <trans-unit id="foundAt">
                 <source>Found at</source>
@@ -96,15 +96,15 @@
             </trans-unit>
 
             <trans-unit id="noDomainsFound">
-                <source>Es wurden keine Domains gefunden.</source>
+                <source>No domains found.</source>
             </trans-unit>
 
             <group id="errorsFound" restype="x-gettext-plurals">
                 <trans-unit id="errorsFound[0]" >
-                    <source>{0} ungültigen Link gefunden</source>
+                    <source>{0} invalid link found</source>
                 </trans-unit>
                 <trans-unit id="errorsFound[1]" >
-                    <source>{0} ungültige Links gefunden</source>
+                    <source>{0} invalid links found</source>
                 </trans-unit>
             </group>
         </body>
