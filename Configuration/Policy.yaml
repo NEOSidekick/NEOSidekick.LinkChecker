@@ -1,11 +1,11 @@
 privilegeTargets:
   'Neos\Neos\Security\Authorization\Privilege\ModulePrivilege':
-    'CodeQ.LinkChecker:Backend.Module':
+    'NEOSidekick.LinkChecker:Backend.Module':
       matcher: 'management/link-checker'
 
 roles:
   'Neos.Neos:AbstractEditor':
     privileges:
       -
-        privilegeTarget: 'CodeQ.LinkChecker:Backend.Module'
+        privilegeTarget: 'NEOSidekick.LinkChecker:Backend.Module'
         permission: GRANT

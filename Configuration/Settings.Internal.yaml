@@ -3,19 +3,19 @@ Neos:
     userInterface:
       translation:
         autoInclude:
-          'CodeQ.LinkChecker': ['Modules']
+          'NEOSidekick.LinkChecker': ['Modules']
     modules:
       management:
         submodules:
           link-checker:
-            label: 'CodeQ.LinkChecker:Modules:module.label'
-            description: 'CodeQ.LinkChecker:Modules:module.description'
+            label: 'NEOSidekick.LinkChecker:Modules:module.label'
+            description: 'NEOSidekick.LinkChecker:Modules:module.description'
             icon: 'fas fa-link'
-            controller: CodeQ\LinkChecker\Controller\Backend\ModuleController
-            resource: 'CodeQ.LinkChecker:Backend.Module'
+            controller: NEOSidekick\LinkChecker\Controller\Backend\ModuleController
+            resource: 'NEOSidekick.LinkChecker:Backend.Module'
             additionalResources:
               styleSheets:
-                - 'resource://CodeQ.LinkChecker/Public/Styles/link-checker.css'
+                - 'resource://NEOSidekick.LinkChecker/Public/Styles/link-checker.css'
     fusion:
       autoInclude:
-        CodeQ.LinkChecker: true
+        NEOSidekick.LinkChecker: true

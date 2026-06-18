@@ -1,6 +1,6 @@
 <?php
 
-namespace CodeQ\LinkChecker\Domain\Notification;
+namespace NEOSidekick\LinkChecker\Domain\Notification;
 
 interface NotificationServiceInterface
 {

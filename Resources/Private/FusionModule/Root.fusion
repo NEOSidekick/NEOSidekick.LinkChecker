@@ -2,4 +2,4 @@ include: resource://Neos.Neos/Private/Fusion/Prototypes/NodeUri.fusion
 include: resource://Neos.Fusion/Private/Fusion/Root.fusion
 include: resource://Neos.Fusion.Form/Private/Fusion/Root.fusion
 include: resource://Sitegeist.FusionLinkPrototypes/Private/Fusion/Root.fusion
-include: resource://CodeQ.LinkChecker/Private/FusionModule/**/*.fusion
+include: resource://NEOSidekick.LinkChecker/Private/FusionModule/**/*.fusion

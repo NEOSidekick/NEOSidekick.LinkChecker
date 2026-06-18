@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace CodeQ\LinkChecker\Command;
+namespace NEOSidekick\LinkChecker\Command;
 
-use CodeQ\LinkChecker\Domain\Crawler\ContentNodeCrawler;
-use CodeQ\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
-use CodeQ\LinkChecker\Infrastructure\DomainService;
-use CodeQ\LinkChecker\Infrastructure\LogAndPersistResultCrawlObserver;
-use CodeQ\LinkChecker\Infrastructure\UriFactory;
-use CodeQ\LinkChecker\Infrastructure\CrawlNonExcludedUrls;
-use CodeQ\LinkChecker\Domain\Notification\NotificationServiceInterface;
-use CodeQ\LinkChecker\Infrastructure\OriginUrlException;
-use CodeQ\LinkChecker\Infrastructure\WebCrawlerFactory;
+use NEOSidekick\LinkChecker\Domain\Crawler\ContentNodeCrawler;
+use NEOSidekick\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
+use NEOSidekick\LinkChecker\Infrastructure\DomainService;
+use NEOSidekick\LinkChecker\Infrastructure\LogAndPersistResultCrawlObserver;
+use NEOSidekick\LinkChecker\Infrastructure\UriFactory;
+use NEOSidekick\LinkChecker\Infrastructure\CrawlNonExcludedUrls;
+use NEOSidekick\LinkChecker\Domain\Notification\NotificationServiceInterface;
+use NEOSidekick\LinkChecker\Infrastructure\OriginUrlException;
+use NEOSidekick\LinkChecker\Infrastructure\WebCrawlerFactory;
 use GuzzleHttp\Psr7\ServerRequest;
 use GuzzleHttp\Psr7\Uri;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
@@ -215,7 +215,7 @@ class CheckLinksCommandController extends CommandController
     private function ensureDomainsNotEmpty(array $domains): void
     {
         if (count($domains) == 0) {
-            $message = $this->translator->translatebyid('noDomainsFound', [], null, null, 'Modules', 'CodeQ.LinkChecker');
+            $message = $this->translator->translatebyid('noDomainsFound', [], null, null, 'Modules', 'NEOSidekick.LinkChecker');
             $this->output->outputFormatted('<error>' . $message . '</error>');
             $this->quit();
         }
@@ -309,7 +309,7 @@ class CheckLinksCommandController extends CommandController
         // with Flow 7.1 not needed anymore
         // see FEATURE: Enable URL Rewriting by default
         // https://github.com/neos/flow-development-collection/pull/2459
-        // needed for \CodeQ\LinkChecker\Domain\Factory\UriBuilderFactory::create
+        // needed for \NEOSidekick\LinkChecker\Domain\Factory\UriBuilderFactory::create
         if (!isset($_SERVER['FLOW_REWRITEURLS']) || $_SERVER['FLOW_REWRITEURLS'] !== '1') {
             $_SERVER['FLOW_REWRITEURLS'] = '1';
         }

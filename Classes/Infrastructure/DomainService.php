@@ -1,6 +1,6 @@
 <?php
 
-namespace CodeQ\LinkChecker\Infrastructure;
+namespace NEOSidekick\LinkChecker\Infrastructure;
 
 use Neos\Flow\Annotations as Flow;
 use Neos\Neos\Domain\Model\Domain;

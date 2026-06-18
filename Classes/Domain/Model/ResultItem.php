@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CodeQ\LinkChecker\Domain\Model;
+namespace NEOSidekick\LinkChecker\Domain\Model;
 
 use DateTimeInterface;
 use Neos\Flow\Annotations as Flow;

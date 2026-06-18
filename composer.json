@@ -1,5 +1,5 @@
 {
-    "name": "codeq/linkchecker",
+    "name": "neosidekick/linkchecker",
     "description": "Finds broken and misconfigured links in your Neos project",
     "type": "neos-package",
     "license": "GPL-3.0-or-later",
@@ -12,14 +12,17 @@
         "sitegeist/fusionlinkprototypes": "^1.0",
         "spatie/crawler": "^8.0"
     },
+    "replace": {
+        "codeq/linkchecker": "self.version"
+    },
     "autoload": {
         "psr-4": {
-            "CodeQ\\LinkChecker\\": "Classes/"
+            "NEOSidekick\\LinkChecker\\": "Classes/"
         }
     },
     "extra": {
         "neos": {
-            "package-key": "CodeQ.LinkChecker"
+            "package-key": "NEOSidekick.LinkChecker"
         },
         "applied-flow-migrations": [
             "TYPO3.Form-20160601101500",

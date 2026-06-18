@@ -1,4 +1,4 @@
-prototype(CodeQ.LinkChecker:Backend.Module.Index) < prototype(Neos.Fusion:Component) {
+prototype(NEOSidekick.LinkChecker:Backend.Module.Index) < prototype(Neos.Fusion:Component) {
     links = '[]'
 
     runAction = Neos.Fusion:UriBuilder {
@@ -8,14 +8,14 @@ prototype(CodeQ.LinkChecker:Backend.Module.Index) < prototype(Neos.Fusion:Compon
     renderer = afx`
         <div class="neos-content neos-container-fluid">
             <div class="neos-row-fluid">
-                <CodeQ.LinkChecker:Component.Links.List links={props.links}/>
+                <NEOSidekick.LinkChecker:Component.Links.List links={props.links}/>
             </div>
             <div class="neos-footer">
                 <Neos.Fusion.Form:Form form.target={props.runAction} attributes.class="neos-inline">
                     <Neos.Fusion.Form:Button
                         attributes.class="neos-button neos-button-primary"
                     >
-                        {I18n.translate('CodeQ.LinkChecker:Modules:action.run')}
+                        {I18n.translate('NEOSidekick.LinkChecker:Modules:action.run')}
                     </Neos.Fusion.Form:Button>
                 </Neos.Fusion.Form:Form>
             </div>

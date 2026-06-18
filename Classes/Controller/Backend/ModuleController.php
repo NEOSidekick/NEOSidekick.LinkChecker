@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CodeQ\LinkChecker\Controller\Backend;
+namespace NEOSidekick\LinkChecker\Controller\Backend;
 
-use CodeQ\LinkChecker\Domain\Model\ResultItem;
-use CodeQ\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
+use NEOSidekick\LinkChecker\Domain\Model\ResultItem;
+use NEOSidekick\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\Flow\Annotations as Flow;
@@ -70,7 +70,7 @@ class ModuleController extends AbstractModuleController
     {
         $this->resultItemRepository->removeAllNonIgnored();
         $settings = $this->configurationManager->getConfiguration(ConfigurationManager::CONFIGURATION_TYPE_SETTINGS, 'Neos.Flow');
-        Scripts::executeCommandAsync("codeq.linkchecker:checklinks:crawl", $settings);
+        Scripts::executeCommandAsync("neosidekick.linkchecker:checklinks:crawl", $settings);
     }
 
     public function deleteAction(ResultItem $resultItem): void

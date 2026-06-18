@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CodeQ\LinkChecker\Infrastructure;
+namespace NEOSidekick\LinkChecker\Infrastructure;
 
-use CodeQ\LinkChecker\Domain\Model\ResultItem;
-use CodeQ\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
+use NEOSidekick\LinkChecker\Domain\Model\ResultItem;
+use NEOSidekick\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Persistence\Exception\IllegalObjectTypeException;

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace CodeQ\LinkChecker\Domain\Crawler;
+namespace NEOSidekick\LinkChecker\Domain\Crawler;
 
-use CodeQ\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
-use CodeQ\LinkChecker\Domain\Model\ResultItem;
+use NEOSidekick\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
+use NEOSidekick\LinkChecker\Domain\Model\ResultItem;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\NodeAggregate\NodeAggregateIdentifier;
 use Neos\ContentRepository\Domain\Projection\Content\TraversableNodeInterface;

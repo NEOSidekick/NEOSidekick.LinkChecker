@@ -1,6 +1,6 @@
 <?php
 
-namespace CodeQ\LinkChecker\Infrastructure;
+namespace NEOSidekick\LinkChecker\Infrastructure;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;

@@ -1,6 +1,6 @@
 -
-  requestFilter: 'isPackage("CodeQ.LinkChecker") && isController("Backend\\Module") && isFormat("html")'
+  requestFilter: 'isPackage("NEOSidekick.LinkChecker") && isController("Backend\\Module") && isFormat("html")'
   viewObjectName: 'Neos\Fusion\View\FusionView'
   options:
     fusionPathPatterns:
-      - 'resource://CodeQ.LinkChecker/Private/FusionModule'
+      - 'resource://NEOSidekick.LinkChecker/Private/FusionModule'

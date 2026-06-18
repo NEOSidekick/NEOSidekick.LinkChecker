@@ -1,11 +1,11 @@
-[![Latest Stable Version](https://poser.pugx.org/codeq/linkchecker/v/stable)](https://packagist.org/packages/codeq/linkchecker)
-[![License](https://poser.pugx.org/codeq/linkchecker/license)](LICENSE)
+[![Latest Stable Version](https://poser.pugx.org/neosidekick/linkchecker/v/stable)](https://packagist.org/packages/neosidekick/linkchecker)
+[![License](https://poser.pugx.org/neosidekick/linkchecker/license)](LICENSE)
 
-# CodeQ.LinkChecker
+# NEOSidekick.LinkChecker
 
 ## Keep your Neos website free of broken links with this easy-to-use link checker
 
-CodeQ.LinkChecker makes sure all your links are working smoothly in Neos projects. It validates internal page and asset 
+NEOSidekick.LinkChecker makes sure all your links are working smoothly in Neos projects. It validates internal page and asset 
 references, external links and phone numbers in node data, as well crawls all rendered pages to ensure that no hidden 
 pages fall through the cracks!
 
@@ -27,15 +27,30 @@ The link checker has the following methods to find broken links:
 
 ## Installation
 
-CodeQ.LinkChecker is available via packagist run `composer require codeq/linkchecker`.
+NEOSidekick.LinkChecker is available via packagist run `composer require neosidekick/linkchecker`.
 We use semantic versioning so every breaking change will increase the major-version number.
+
+### Upgrade from CodeQ.LinkChecker
+
+This package replaces `codeq/linkchecker` and ships a Flow code migration for existing projects.
+
+After changing the Composer dependency, run:
+
+```bash
+./flow flow:core:migrate Your.SitePackage --force
+./flow doctrine:migrate
+```
+
+The code migration updates PHP namespaces, package keys, Fusion references, command identifiers and settings paths from
+`CodeQ.LinkChecker` to `NEOSidekick.LinkChecker`. The Doctrine migration renames the persisted result table from
+`codeq_linkchecker_domain_model_resultitem` to `neosidekick_linkchecker_domain_model_resultitem`.
 
 ## Usage
 
 Configure the link checker sync in your settings, like this:
 
 ```yaml
-CodeQ:
+NEOSidekick:
   LinkChecker:
     # how many concurrent requests should the command controller perform
     # If set too high, you will DDoS your server
@@ -52,7 +67,7 @@ The link checker can also send an email if it finds broken links.
 To enable this, you need to configure the email service like this:
 
 ```yaml
-CodeQ:
+NEOSidekick:
   LinkChecker:
     notifications:
       enabled: true

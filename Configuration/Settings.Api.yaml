@@ -1,4 +1,4 @@
-CodeQ:
+NEOSidekick:
   LinkChecker:
     # how many concurrent requests should the command controller perform
     # If set too high, you most DOS your server
@@ -18,7 +18,7 @@ CodeQ:
 
     notifications:
       enabled: false
-      service: CodeQ\LinkChecker\Infrastructure\EmailService
+      service: NEOSidekick\LinkChecker\Infrastructure\EmailService
       subject: 'Link checker results'
       mail:
         sender:
@@ -30,7 +30,7 @@ CodeQ:
             name: 'CodeQ'
             address: 'test@example.com'
         template:
-          package: 'CodeQ.LinkChecker'
+          package: 'NEOSidekick.LinkChecker'
           file: 'NotificationMail'
         logging:
           errors: log

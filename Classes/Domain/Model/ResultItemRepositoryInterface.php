@@ -1,6 +1,6 @@
 <?php
 
-namespace CodeQ\LinkChecker\Domain\Model;
+namespace NEOSidekick\LinkChecker\Domain\Model;
 
 use Neos\Flow\Persistence\QueryResultInterface;
 

@@ -1,11 +1,11 @@
-CodeQ.LinkChecker.Backend.ModuleController {
+NEOSidekick.LinkChecker.Backend.ModuleController {
     index = afx`
-        <CodeQ.LinkChecker:Component.FlashMessages flashMessages={flashMessages}/>
-        <CodeQ.LinkChecker:Backend.Module.Index links={links}/>
+        <NEOSidekick.LinkChecker:Component.FlashMessages flashMessages={flashMessages}/>
+        <NEOSidekick.LinkChecker:Backend.Module.Index links={links}/>
     `
 
     run = afx`
-        <CodeQ.LinkChecker:Component.FlashMessages flashMessages={flashMessages}/>
+        <NEOSidekick.LinkChecker:Component.FlashMessages flashMessages={flashMessages}/>
         Crawling was started come back later to the link checker to see the results.
         <div style="padding-top: 1rem">
             <Sitegeist.FusionLinkPrototypes:ModuleLink

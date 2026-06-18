@@ -1,4 +1,4 @@
-prototype(CodeQ.LinkChecker:Component.FlashMessages) < prototype(Neos.Fusion:Component) {
+prototype(NEOSidekick.LinkChecker:Component.FlashMessages) < prototype(Neos.Fusion:Component) {
     flashMessages = ${[]}
 
     renderer = afx`
