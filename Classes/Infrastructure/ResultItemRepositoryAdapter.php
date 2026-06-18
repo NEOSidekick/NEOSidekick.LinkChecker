@@ -21,6 +21,11 @@ class ResultItemRepositoryAdapter extends Repository implements ResultItemReposi
     const ENTITY_CLASSNAME = ResultItem::class;
 
     /**
+     * @var array<string, ResultItem>
+     */
+    private array $resultItemsByFingerprint = [];
+
+    /**
      * @var EntityManagerInterface
      * @Flow\Inject
      */
@@ -45,6 +50,8 @@ class ResultItemRepositoryAdapter extends Repository implements ResultItemReposi
 
     public function truncate(): void
     {
+        $this->resultItemsByFingerprint = [];
+
         // https://neos-project.slack.com/archives/C04V4C6B0/p1668168503014459
         $qB = $this->entityManager->createQueryBuilder()
             ->delete(ResultItem::class);
@@ -55,6 +62,8 @@ class ResultItemRepositoryAdapter extends Repository implements ResultItemReposi
 
     public function removeAllNonIgnored(): void
     {
+        $this->resultItemsByFingerprint = [];
+
         $query = $this->createQuery();
         $query->matching($query->equals('ignore', false));
         $resultItems = $query->execute();
@@ -77,29 +86,28 @@ class ResultItemRepositoryAdapter extends Repository implements ResultItemReposi
      */
     public function add($resultItem): void
     {
-        $existingResultItem = $this->findOneByData([
-            'domain' => $resultItem->getDomain(),
-            'source' => $resultItem->getSource(),
-            'target' => $resultItem->getTarget(),
-            'statusCode' => $resultItem->getStatusCode(),
-        ]);
+        $resultItem->refreshFingerprint();
+        $fingerprint = $resultItem->getFingerprint();
+
+        $existingResultItem = $this->resultItemsByFingerprint[$fingerprint] ?? $this->findOneByFingerprint($fingerprint);
 
         if ($existingResultItem instanceof ResultItem) {
+            $existingResultItem->mergeFrom($resultItem);
+            $this->resultItemsByFingerprint[$fingerprint] = $existingResultItem;
+            $this->update($existingResultItem);
             return;
         }
 
+        $this->resultItemsByFingerprint[$fingerprint] = $resultItem;
         parent::add($resultItem);
     }
 
-    private function findOneByData(array $properties = [], $cacheResult = false): ?ResultItem
+    private function findOneByFingerprint(string $fingerprint, bool $cacheResult = false): ?ResultItem
     {
         $query = $this->createQuery();
-        $constraints = [];
-        foreach ($properties as $propertyName => $propertyValue) {
-            $constraints[] = $query->equals($propertyName, $propertyValue);
-        }
+
         return $query
-            ->matching($query->logicalAnd($constraints))
+            ->matching($query->equals('fingerprint', $fingerprint))
             ->execute($cacheResult)
             ->getFirst();
     }

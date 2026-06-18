@@ -14,27 +14,37 @@ use Doctrine\ORM\Mapping as ORM;
 class ResultItem implements \JsonSerializable
 {
     /**
+     * @var string|null
+     * @ORM\Column(length=64, nullable=false, unique=true)
+     */
+    protected ?string $fingerprint = null;
+
+    /**
      * @var string
      */
     protected string $domain;
 
     /**
      * @var string|null
+     * @ORM\Column(length=2000, nullable=true)
      */
     protected ?string $source = null;
 
     /**
      * @var string|null
+     * @ORM\Column(length=2000, nullable=true)
      */
     protected ?string $sourcePath = null;
 
     /**
      * @var string
+     * @ORM\Column(length=2000, nullable=false)
      */
     protected string $target;
 
     /**
      * @var string|null
+     * @ORM\Column(length=2000, nullable=true)
      */
     protected ?string $targetPath = null;
 
@@ -65,6 +75,46 @@ class ResultItem implements \JsonSerializable
      * @var DateTimeInterface
      */
     protected DateTimeInterface $checkedAt;
+
+    public static function createFingerprint(
+        string $domain,
+        ?string $source,
+        ?string $sourcePath,
+        string $target,
+        int $statusCode
+    ): string {
+        return hash('sha256', json_encode([
+            'domain' => self::normalizeDomain($domain),
+            'source' => self::normalizeSourceIdentity($source, $sourcePath),
+            'target' => self::normalizeUriLikeValue($target),
+            'statusCode' => $statusCode,
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    public function refreshFingerprint(): void
+    {
+        $this->fingerprint = self::createFingerprint(
+            $this->domain,
+            $this->source,
+            $this->sourcePath,
+            $this->target,
+            $this->statusCode
+        );
+    }
+
+    public function getFingerprint(): string
+    {
+        if ($this->fingerprint === null || $this->fingerprint === '') {
+            $this->refreshFingerprint();
+        }
+
+        return $this->fingerprint;
+    }
+
+    public function setFingerprint(?string $fingerprint = null): void
+    {
+        $this->fingerprint = $fingerprint;
+    }
 
     public function getDomain(): string
     {
@@ -166,9 +216,39 @@ class ResultItem implements \JsonSerializable
         $this->checkedAt = $checkedAt;
     }
 
+    public function mergeFrom(ResultItem $incoming): void
+    {
+        if ($incoming->getCreatedAt() < $this->getCreatedAt()) {
+            $this->setCreatedAt($incoming->getCreatedAt());
+        }
+
+        if ($incoming->getCheckedAt() > $this->getCheckedAt()) {
+            $this->setCheckedAt($incoming->getCheckedAt());
+        }
+
+        if (!$this->hasValue($this->source) && $this->hasValue($incoming->getSource())) {
+            $this->setSource($incoming->getSource());
+        }
+
+        if (!$this->hasValue($this->sourcePath) && $this->hasValue($incoming->getSourcePath())) {
+            $this->setSourcePath($incoming->getSourcePath());
+        }
+
+        if (!$this->hasValue($this->targetPath) && $this->hasValue($incoming->getTargetPath())) {
+            $this->setTargetPath($incoming->getTargetPath());
+        }
+
+        if ($incoming->getIgnore()) {
+            $this->setIgnore(true);
+        }
+
+        $this->refreshFingerprint();
+    }
+
     public function jsonSerialize(): array
     {
         return [
+            'fingerprint' => $this->getFingerprint(),
             'domain' => $this->getDomain(),
             'source' => $this->getSource(),
             'sourcePath' => $this->getSourcePath(),
@@ -180,5 +260,61 @@ class ResultItem implements \JsonSerializable
             'createdAt' => $this->getCreatedAt()->format('Y-m-d H:i:s'),
             'checkedAt' => $this->getCheckedAt()->format('Y-m-d H:i:s'),
         ];
+    }
+
+    private static function normalizeDomain(string $domain): string
+    {
+        return strtolower(trim($domain));
+    }
+
+    private static function normalizeSourceIdentity(?string $source, ?string $sourcePath): string
+    {
+        if (self::hasStaticValue($source)) {
+            return 'source:' . strtolower(trim($source));
+        }
+
+        return 'sourcePath:' . self::normalizeUriLikeValue($sourcePath ?? '');
+    }
+
+    private static function normalizeUriLikeValue(string $value): string
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return '';
+        }
+
+        if (str_starts_with(strtolower($value), 'node://')) {
+            return strtolower($value);
+        }
+
+        $parts = parse_url($value);
+        if (!is_array($parts) || !isset($parts['scheme'], $parts['host'])) {
+            return $value;
+        }
+
+        $scheme = strtolower($parts['scheme']);
+        $host = strtolower($parts['host']);
+        $port = isset($parts['port']) ? (int)$parts['port'] : null;
+        $path = $parts['path'] ?? '';
+        $query = isset($parts['query']) && $parts['query'] !== '' ? '?' . $parts['query'] : '';
+        $user = $parts['user'] ?? null;
+        $pass = isset($parts['pass']) ? ':' . $parts['pass'] : '';
+        $auth = $user !== null ? $user . $pass . '@' : '';
+
+        $defaultPort = ($scheme === 'http' && $port === 80) || ($scheme === 'https' && $port === 443);
+        $portPart = $port !== null && !$defaultPort ? ':' . $port : '';
+
+        return sprintf('%s://%s%s%s%s%s', $scheme, $auth, $host, $portPart, $path, $query);
+    }
+
+    private function hasValue(?string $value): bool
+    {
+        return self::hasStaticValue($value);
+    }
+
+    private static function hasStaticValue(?string $value): bool
+    {
+        return $value !== null && trim($value) !== '';
     }
 }
