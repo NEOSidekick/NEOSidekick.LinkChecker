@@ -92,7 +92,7 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
         UriInterface $url,
         ResponseInterface $response,
         ?UriInterface $foundOnUrl = null,
-        string $linkText = null
+        ?string $linkText = null
     ): void {
         $statusCode = $response->getStatusCode();
         if (!$this->isExcludedStatusCode($statusCode)) {
@@ -111,7 +111,7 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
         UriInterface $url,
         RequestException $requestException,
         ?UriInterface $foundOnUrl = null,
-        string $linkText = null
+        ?string $linkText = null
     ): void {
         $statusCode = (int)$requestException->getCode();
         if (!$this->isExcludedStatusCode($statusCode)) {
@@ -126,7 +126,7 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
      */
     protected function addCrawlingResultToStore(
         UriInterface $crawlingUrl,
-        UriInterface $originUrl = null,
+        ?UriInterface $originUrl = null,
         int $statusCode = 200
     ): void {
         $cliMessage = "Checked {$crawlingUrl} from {$originUrl} with status {$statusCode}";

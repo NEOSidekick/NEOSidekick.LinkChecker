@@ -14,10 +14,55 @@
             </trans-unit>
 
             <trans-unit id="list.action.delete">
-                <source>Delete</source>
+                <source>Mark as fixed</source>
+            </trans-unit>
+            <trans-unit id="list.action.deleteShort">
+                <source>Mark fixed</source>
             </trans-unit>
             <trans-unit id="list.action.ignore">
                 <source>Ignore this error</source>
+            </trans-unit>
+            <trans-unit id="list.action.ignoreShort">
+                <source>Ignore</source>
+            </trans-unit>
+            <trans-unit id="group.action.resolveAll">
+                <source>Mark all fixed</source>
+            </trans-unit>
+            <trans-unit id="group.action.ignoreAll">
+                <source>Ignore all</source>
+            </trans-unit>
+            <trans-unit id="group.rows.pages">
+                <source>Found on these pages</source>
+            </trans-unit>
+            <trans-unit id="group.rows.targets">
+                <source>Broken links on this page</source>
+            </trans-unit>
+            <trans-unit id="lastChecked">
+                <source>Last checked</source>
+            </trans-unit>
+            <trans-unit id="actions">
+                <source>Actions</source>
+            </trans-unit>
+            <trans-unit id="action.editSource">
+                <source>Edit source page</source>
+            </trans-unit>
+            <trans-unit id="action.editSourceShort">
+                <source>Edit</source>
+            </trans-unit>
+            <trans-unit id="action.openSource">
+                <source>Open source page</source>
+            </trans-unit>
+            <trans-unit id="action.openSourceShort">
+                <source>Open</source>
+            </trans-unit>
+            <trans-unit id="action.openTarget">
+                <source>Open target</source>
+            </trans-unit>
+            <trans-unit id="action.editTarget">
+                <source>Edit target page</source>
+            </trans-unit>
+            <trans-unit id="action.expandHighImpact">
+                <source>Expand high-impact</source>
             </trans-unit>
 
             <trans-unit id="domain">
@@ -93,6 +138,152 @@
 
             <trans-unit id="list.empty">
                 <source>There are currently no invalid links.</source>
+            </trans-unit>
+
+            <trans-unit id="group.mode">
+                <source>Group by</source>
+            </trans-unit>
+            <trans-unit id="group.mode.target">
+                <source>Broken target</source>
+            </trans-unit>
+            <trans-unit id="group.mode.source">
+                <source>Source page</source>
+            </trans-unit>
+            <trans-unit id="group.mode.domain">
+                <source>Site/domain</source>
+            </trans-unit>
+            <trans-unit id="group.mode.status">
+                <source>Error type</source>
+            </trans-unit>
+            <trans-unit id="group.summary">
+                <source>{0} broken targets from {1} broken links</source>
+            </trans-unit>
+            <group id="group.sources" restype="x-gettext-plurals">
+                <trans-unit id="group.sources[0]">
+                    <source>{0} page</source>
+                </trans-unit>
+                <trans-unit id="group.sources[1]">
+                    <source>{0} pages</source>
+                </trans-unit>
+            </group>
+            <group id="group.occurrences" restype="x-gettext-plurals">
+                <trans-unit id="group.occurrences[0]">
+                    <source>{0} broken link</source>
+                </trans-unit>
+                <trans-unit id="group.occurrences[1]">
+                    <source>{0} broken links</source>
+                </trans-unit>
+            </group>
+            <group id="group.sites" restype="x-gettext-plurals">
+                <trans-unit id="group.sites[0]">
+                    <source>{0} site</source>
+                </trans-unit>
+                <trans-unit id="group.sites[1]">
+                    <source>{0} sites</source>
+                </trans-unit>
+            </group>
+            <group id="group.duplicates" restype="x-gettext-plurals">
+                <trans-unit id="group.duplicates[0]">
+                    <source>{0} duplicate</source>
+                </trans-unit>
+                <trans-unit id="group.duplicates[1]">
+                    <source>{0} duplicates</source>
+                </trans-unit>
+            </group>
+            <trans-unit id="group.highImpact">
+                <source>High impact</source>
+            </trans-unit>
+            <trans-unit id="summary.groups">
+                <source>Dead-link destinations</source>
+            </trans-unit>
+            <trans-unit id="summary.rows">
+                <source>Broken links</source>
+            </trans-unit>
+            <trans-unit id="sidebar.title">
+                <source>Overview and filters</source>
+            </trans-unit>
+            <trans-unit id="sidebar.summary">
+                <source>Summary</source>
+            </trans-unit>
+            <trans-unit id="health.title">
+                <source>Link health</source>
+            </trans-unit>
+            <trans-unit id="health.detail">
+                <source>{0} of {1} pages affected</source>
+            </trans-unit>
+            <trans-unit id="health.level.excellent">
+                <source>Excellent</source>
+            </trans-unit>
+            <trans-unit id="health.level.good">
+                <source>Good</source>
+            </trans-unit>
+            <trans-unit id="health.level.needsWork">
+                <source>Needs work</source>
+            </trans-unit>
+            <trans-unit id="health.level.critical">
+                <source>Critical</source>
+            </trans-unit>
+
+            <trans-unit id="filter.active">
+                <source>Filtered</source>
+            </trans-unit>
+            <trans-unit id="filter.reset">
+                <source>Reset filters</source>
+            </trans-unit>
+            <trans-unit id="filter.targetType">
+                <source>Broken link type</source>
+            </trans-unit>
+            <trans-unit id="filter.domain">
+                <source>Domain</source>
+            </trans-unit>
+            <trans-unit id="filter.status">
+                <source>Status</source>
+            </trans-unit>
+            <trans-unit id="filter.impact">
+                <source>Impact</source>
+            </trans-unit>
+            <trans-unit id="filter.impact.all">
+                <source>All impact</source>
+            </trans-unit>
+            <trans-unit id="filter.impact.10Plus">
+                <source>10+ pages</source>
+            </trans-unit>
+            <trans-unit id="filter.impact.3Plus">
+                <source>3+ pages</source>
+            </trans-unit>
+            <trans-unit id="filter.impact.low">
+                <source>1-2 pages</source>
+            </trans-unit>
+            <trans-unit id="filter.allTargetTypes">
+                <source>All broken link types</source>
+            </trans-unit>
+            <trans-unit id="filter.allDomains">
+                <source>All domains</source>
+            </trans-unit>
+            <trans-unit id="filter.allStatuses">
+                <source>All statuses</source>
+            </trans-unit>
+            <trans-unit id="filter.status.490">
+                <source>Phone number format</source>
+            </trans-unit>
+            <trans-unit id="filter.highImpactOnly">
+                <source>High-impact only</source>
+            </trans-unit>
+            <trans-unit id="filter.showAll">
+                <source>Show all</source>
+            </trans-unit>
+
+            <trans-unit id="targetType.internalNode">
+                <source>Deleted/hidden internal pages</source>
+            </trans-unit>
+            <trans-unit id="targetType.externalUrl">
+                <source>Dead external link destinations</source>
+            </trans-unit>
+            <trans-unit id="targetType.otherProtocol">
+                <source>Malformed links</source>
+            </trans-unit>
+            <trans-unit id="targetType.mixed">
+                <source>Mixed targets</source>
             </trans-unit>
 
             <trans-unit id="noDomainsFound">

@@ -9,7 +9,6 @@ use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Mvc\Controller\ControllerContext;
-use Neos\Flow\Mvc\Routing\UriBuilder;
 use Neos\Neos\Service\LinkingService;
 use Neos\Neos\Service\UserService;
 
@@ -30,17 +29,23 @@ class ResultItemViewFactory
      */
     protected $userService;
 
+    /**
+     * @var LinkingService
+     * @Flow\Inject
+     */
+    protected $linkingService;
+
     public function create(ResultItem $resultItem, ControllerContext $controllerContext): ResultItemView
     {
         $sourcePath = $resultItem->getSourcePath() ?? '';
-        $sourceFrontendUri = $this->createSourceFrontendUri($sourcePath, $controllerContext);
+        $sourceFrontendUri = $this->createSourceFrontendUri($sourcePath, $resultItem->getDomain(), $controllerContext);
         $targetTitle = $this->resolveTargetPageTitle($resultItem->getTarget());
 
         return new ResultItemView(
             $resultItem,
             $this->createSourceLabel($sourcePath, $sourceFrontendUri),
             $sourceFrontendUri,
-            $this->createSourceEditUri($sourcePath, $controllerContext),
+            $this->createSourceEditUri($sourcePath, $resultItem->getDomain(), $controllerContext),
             $targetTitle ?? $resultItem->getTarget(),
             $this->createTargetUri($resultItem, $controllerContext)
         );
@@ -59,11 +64,18 @@ class ResultItemViewFactory
         return '#';
     }
 
-    private function createSourceFrontendUri(string $sourcePath, ControllerContext $controllerContext): string
+    private function createSourceFrontendUri(string $sourcePath, string $domain, ControllerContext $controllerContext): string
     {
         if ($this->isNodePath($sourcePath)) {
-            return $this->createUriBuilder($controllerContext)
-                ->uriFor('show', ['node' => $sourcePath], 'Frontend\Node', 'Neos.Neos');
+            $sourceNode = $this->resolveNodeByPath($sourcePath, 'live');
+            if ($sourceNode instanceof NodeInterface) {
+                return $this->replaceUriHost(
+                    $this->linkingService->createNodeUri($controllerContext, $sourceNode, null, null, true),
+                    $domain
+                );
+            }
+
+            return '#';
         }
 
         if (str_starts_with($sourcePath, 'http')) {
@@ -73,13 +85,13 @@ class ResultItemViewFactory
         return '#';
     }
 
-    private function createSourceEditUri(string $sourcePath, ControllerContext $controllerContext): ?string
+    private function createSourceEditUri(string $sourcePath, string $domain, ControllerContext $controllerContext): ?string
     {
         if (!$this->isNodePath($sourcePath)) {
             return null;
         }
 
-        return $this->createBackendNodeUri($sourcePath, $controllerContext);
+        return $this->createBackendNodeUri($sourcePath, $controllerContext, $domain);
     }
 
     private function createTargetUri(ResultItem $resultItem, ControllerContext $controllerContext): ?string
@@ -103,14 +115,66 @@ class ResultItemViewFactory
         ?string $domain = null
     ): string {
         $workspaceName = $this->userService->getPersonalWorkspaceName() ?? 'live';
-        $uri = $this->createUriBuilder($controllerContext)
-            ->uriFor('index', ['node' => $nodePath . '@' . $workspaceName], 'Backend', 'Neos.Neos.Ui');
+        $node = $this->resolveNodeByPath($nodePath, $workspaceName);
+        if (!($node instanceof NodeInterface)) {
+            return '#';
+        }
+
+        $uri = $this->createBackendContentUri($controllerContext, $node->getContextPath());
 
         if ($domain !== null) {
-            return str_replace((string)$controllerContext->getRequest()->getHttpRequest()->getUri(), $domain, $uri);
+            return $this->replaceUriHost($uri, $domain);
         }
 
         return $uri;
+    }
+
+    private function createBackendContentUri(ControllerContext $controllerContext, string $nodeContextPath): string
+    {
+        $requestUri = $controllerContext->getRequest()->getHttpRequest()->getUri();
+        $authority = $requestUri->getHost();
+        if ($requestUri->getPort() !== null) {
+            $authority .= ':' . $requestUri->getPort();
+        }
+
+        return $requestUri->getScheme() . '://' . $authority . '/neos/content?' . http_build_query([
+            'node' => $nodeContextPath,
+        ], '', '&', PHP_QUERY_RFC3986);
+    }
+
+    private function resolveNodeByPath(string $nodePath, string $workspaceName): ?NodeInterface
+    {
+        $context = $this->contextFactory->create([
+            'workspaceName' => $workspaceName,
+            'invisibleContentShown' => true,
+            'inaccessibleContentShown' => true,
+            'removedContentShown' => false,
+        ]);
+
+        return $context->getNode($nodePath);
+    }
+
+    private function replaceUriHost(string $uri, string $domain): string
+    {
+        if ($domain === '' || $uri === '#') {
+            return $uri;
+        }
+
+        $parts = parse_url($uri);
+        if ($parts === false || !isset($parts['scheme'], $parts['host'])) {
+            return $uri;
+        }
+
+        $host = $parts['host'];
+        if (isset($parts['port'])) {
+            $host .= ':' . $parts['port'];
+        }
+
+        return preg_replace(
+            '#^' . preg_quote($parts['scheme'] . '://' . $host, '#') . '#',
+            $parts['scheme'] . '://' . $domain,
+            $uri
+        ) ?? $uri;
     }
 
     private function resolveTargetPageTitle(string $target): ?string
@@ -136,11 +200,6 @@ class ResultItemViewFactory
         $title = $targetNode->getProperty('title');
 
         return is_string($title) && $title !== '' ? $title : null;
-    }
-
-    private function createUriBuilder(ControllerContext $controllerContext): UriBuilder
-    {
-        return (clone $controllerContext->getUriBuilder())->reset();
     }
 
     private function isNodePath(string $sourcePath): bool

@@ -90,8 +90,8 @@ class WebCrawlerFactory
             function (
                 $retries,
                 Request $request,
-                Response $response = null,
-                \Exception $exception = null
+                ?Response $response = null,
+                ?\Exception $exception = null
             ) use ($retryAttempts) {
                 if ($retries >= $retryAttempts) {
                     return false;

@@ -1,3 +1,295 @@
+prototype(NEOSidekick.LinkChecker:Component.Links.FilterLink) < prototype(Neos.Fusion:Component) {
+    option = null
+    active = false
+    variant = 'chip'
+
+    renderer = afx`
+        <a href={props.option.uri} class={props.active ? 'link-checker-filter__button link-checker-filter__button--active link-checker-filter__button--' + props.variant : 'link-checker-filter__button link-checker-filter__button--' + props.variant}>
+            <span class="link-checker-filter__text">
+                <Neos.Fusion:Fragment @if={props.option.translationId}>
+                    {I18n.translate('NEOSidekick.LinkChecker:Modules:' + props.option.translationId)}
+                </Neos.Fusion:Fragment>
+                <Neos.Fusion:Fragment @if={!props.option.translationId}>
+                    {props.option.label}
+                </Neos.Fusion:Fragment>
+            </span>
+            <span @if={props.option.showCount} class="link-checker-filter__count">{props.option.count}</span>
+        </a>
+    `
+}
+
+prototype(NEOSidekick.LinkChecker:Component.Links.GroupedList) < prototype(Neos.Fusion:Component) {
+    groupedLinks = null
+
+    renderer = afx`
+        <div class="link-checker-groups">
+            <div @if={props.groupedLinks.rawCount > 0} class="link-checker-workspace">
+                <details class="link-checker-sidebar" open>
+                    <summary class="link-checker-sidebar__toggle">
+                        <span>
+                            <i class="fas fa-filter"></i>
+                            {I18n.translate('NEOSidekick.LinkChecker:Modules:sidebar.title')}
+                        </span>
+                        <i class="fas fa-chevron-left link-checker-sidebar__toggle-icon"></i>
+                    </summary>
+
+                    <div class="link-checker-sidebar__content">
+                        <div class="link-checker-sidebar__section-title">
+                            {I18n.translate('NEOSidekick.LinkChecker:Modules:sidebar.summary')}
+                        </div>
+
+                        <div class="link-checker-health-gauge" style={'--link-health-rotation: ' + props.groupedLinks.healthScore.needleRotation + 'deg'}>
+                            <div class="link-checker-health-gauge__arc"></div>
+                            <div class="link-checker-health-gauge__mask"></div>
+                            <div class="link-checker-health-gauge__needle"></div>
+                            <div class="link-checker-health-gauge__pin"></div>
+                        </div>
+
+                        <div class="link-checker-summary-strip">
+                            <Neos.Fusion:Loop items={props.groupedLinks.summaryItems} itemName="item">
+                                <div class="link-checker-summary-strip__item">
+                                    <i class={item.icon}></i>
+                                    <span class="link-checker-summary-strip__label">
+                                        <Neos.Fusion:Fragment @if={item.translationId}>
+                                            {I18n.translate('NEOSidekick.LinkChecker:Modules:' + item.translationId)}
+                                        </Neos.Fusion:Fragment>
+                                        <Neos.Fusion:Fragment @if={!item.translationId}>
+                                            {item.label}
+                                        </Neos.Fusion:Fragment>
+                                    </span>
+                                    <span class="link-checker-summary-strip__value">{item.value}</span>
+                                </div>
+                            </Neos.Fusion:Loop>
+                        </div>
+
+                        <div class="link-checker-sidebar__divider"></div>
+
+                        <div class="link-checker-filter">
+                            <div class="link-checker-filter__row link-checker-filter__row--group">
+                                <span class="link-checker-filter__label">{I18n.translate('NEOSidekick.LinkChecker:Modules:group.mode')}</span>
+                                <div class="link-checker-segmented-control">
+                                <Neos.Fusion:Loop items={props.groupedLinks.modeOptions} itemName="option">
+                                    <NEOSidekick.LinkChecker:Component.Links.FilterLink
+                                        option={option}
+                                        active={option.identifier == props.groupedLinks.activeMode}
+                                        variant="segment"
+                                    />
+                                </Neos.Fusion:Loop>
+                                </div>
+                            </div>
+
+                            <div class="link-checker-filter__row">
+                                <span class="link-checker-filter__label">{I18n.translate('NEOSidekick.LinkChecker:Modules:filter.targetType')}</span>
+                                <Neos.Fusion:Loop items={props.groupedLinks.targetTypeOptions} itemName="option">
+                                    <NEOSidekick.LinkChecker:Component.Links.FilterLink
+                                        option={option}
+                                        active={option.identifier == props.groupedLinks.activeTargetType}
+                                    />
+                                </Neos.Fusion:Loop>
+                            </div>
+
+                            <div class="link-checker-filter__row">
+                                <span class="link-checker-filter__label">{I18n.translate('NEOSidekick.LinkChecker:Modules:filter.domain')}</span>
+                                <Neos.Fusion:Loop items={props.groupedLinks.domainOptions} itemName="option">
+                                    <NEOSidekick.LinkChecker:Component.Links.FilterLink
+                                        option={option}
+                                        active={option.identifier == props.groupedLinks.activeDomain}
+                                    />
+                                </Neos.Fusion:Loop>
+                            </div>
+
+                            <div class="link-checker-filter__row">
+                                <span class="link-checker-filter__label">{I18n.translate('NEOSidekick.LinkChecker:Modules:filter.status')}</span>
+                                <Neos.Fusion:Loop items={props.groupedLinks.statusOptions} itemName="option">
+                                    <NEOSidekick.LinkChecker:Component.Links.FilterLink
+                                        option={option}
+                                        active={option.identifier == props.groupedLinks.activeStatusCode}
+                                    />
+                                </Neos.Fusion:Loop>
+                            </div>
+
+                            <div class="link-checker-filter__row">
+                                <span class="link-checker-filter__label">{I18n.translate('NEOSidekick.LinkChecker:Modules:filter.impact')}</span>
+                                <Neos.Fusion:Loop items={props.groupedLinks.impactOptions} itemName="option">
+                                    <NEOSidekick.LinkChecker:Component.Links.FilterLink
+                                        option={option}
+                                        active={option.identifier == props.groupedLinks.activeImpact}
+                                    />
+                                </Neos.Fusion:Loop>
+                            </div>
+                        </div>
+
+                        <a @if={props.groupedLinks.hasActiveFilters} href={props.groupedLinks.resetUri} class="link-checker-secondary-action">
+                            {I18n.translate('NEOSidekick.LinkChecker:Modules:filter.reset')}
+                        </a>
+                    </div>
+                </details>
+
+                <div class="link-checker-results">
+                    <div @if={!props.groupedLinks.hasResults} class="link-checker-empty-state">
+                        {I18n.translate('NEOSidekick.LinkChecker:Modules:list.empty')}
+                    </div>
+
+                    <Neos.Fusion:Loop items={props.groupedLinks.groups} itemName="group">
+                        <NEOSidekick.LinkChecker:Component.Links.Group group={group} hasMultipleDomains={props.groupedLinks.hasMultipleDomains}/>
+                    </Neos.Fusion:Loop>
+                </div>
+            </div>
+
+            <div @if={props.groupedLinks.rawCount == 0 && !props.groupedLinks.hasResults} class="link-checker-empty-state">
+                {I18n.translate('NEOSidekick.LinkChecker:Modules:list.empty')}
+            </div>
+        </div>
+        <script>{StaticResource.content("NEOSidekick.LinkChecker", "Private/FusionModule/Components/Links.List.js")}</script>
+    `
+}
+
+prototype(NEOSidekick.LinkChecker:Component.Links.Group) < prototype(Neos.Fusion:Component) {
+    group = null
+    hasMultipleDomains = false
+
+    resolveGroupUri = Neos.Fusion:UriBuilder {
+        action = 'resolveGroup'
+    }
+    ignoreGroupUri = Neos.Fusion:UriBuilder {
+        action = 'ignoreGroup'
+    }
+
+    renderer = afx`
+        <details class="link-checker-group">
+            <summary class="link-checker-group__summary">
+                <div class="link-checker-group__head">
+                    <div class="link-checker-group__heading">
+                        <span class="link-checker-group__label" title={props.group.label}>{props.group.label}</span>
+                        <a @if={props.group.headerEditUri} href={props.group.headerEditUri} target="_blank" onclick="event.stopPropagation()" class="link-checker-icon-button"
+                           title={props.group.headerKind == 'source' ? I18n.translate('NEOSidekick.LinkChecker:Modules:action.editSource') : I18n.translate('NEOSidekick.LinkChecker:Modules:action.editTarget')}>
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a @if={props.group.headerOpenUri} href={props.group.headerOpenUri} target="_blank" onclick="event.stopPropagation()" class="link-checker-icon-button"
+                           title={props.group.headerKind == 'source' ? I18n.translate('NEOSidekick.LinkChecker:Modules:action.openSource') : I18n.translate('NEOSidekick.LinkChecker:Modules:action.openTarget')}>
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    </div>
+                    <div class="link-checker-group__meta">
+                        <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:targetType.' + props.group.targetType)}</span>
+                        <span>{I18n.id("group.sources").arguments([props.group.affectedSourceCount]).quantity(props.group.affectedSourceCount).source("Modules").package("NEOSidekick.LinkChecker").translate()}</span>
+                        <span @if={props.group.mode != 'domain' && props.hasMultipleDomains}>{I18n.id("group.sites").arguments([props.group.domainCount]).quantity(props.group.domainCount).source("Modules").package("NEOSidekick.LinkChecker").translate()}</span>
+                        <span @if={props.group.mode != 'domain' && !props.hasMultipleDomains} title={props.group.domainsLabel}>{props.group.domainsLabel}</span>
+                        <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:lastChecked')} {Date.format(props.group.lastCheckedAt, 'd.m.Y H:i')}</span>
+                    </div>
+                    <div @if={props.group.secondaryLabel} class="link-checker-group__uri" title={props.group.secondaryLabel}>{props.group.secondaryLabel}</div>
+                </div>
+
+                <div class="link-checker-group__aside" onclick="event.stopPropagation()">
+                    <span @if={props.group.showStatusInHeader} class={'link-checker-status link-checker-status--' + props.group.severity}>
+                        {I18n.translate('NEOSidekick.LinkChecker:Modules:' + props.group.statusTranslationId)}
+                    </span>
+                    <div class="link-checker-group__bulk">
+                        <Neos.Fusion.Form:Form form.target={props.resolveGroupUri} attributes.class="neos-inline">
+                            <Neos.Fusion.Form:Input field.name="resultItemIds" field.value={props.group.resultItemIds} attributes.type="hidden"/>
+                            <Neos.Fusion.Form:Button attributes.class="link-checker-bulk-action" attributes.title={I18n.translate('NEOSidekick.LinkChecker:Modules:group.action.resolveAll')}>
+                                <i class="fas fa-check-double"></i>
+                                <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:group.action.resolveAll')}</span>
+                            </Neos.Fusion.Form:Button>
+                        </Neos.Fusion.Form:Form>
+                        <Neos.Fusion.Form:Form form.target={props.ignoreGroupUri} attributes.class="neos-inline">
+                            <Neos.Fusion.Form:Input field.name="resultItemIds" field.value={props.group.resultItemIds} attributes.type="hidden"/>
+                            <Neos.Fusion.Form:Button attributes.class="link-checker-bulk-action" attributes.title={I18n.translate('NEOSidekick.LinkChecker:Modules:group.action.ignoreAll')}>
+                                <i class="fas fa-eye-slash"></i>
+                                <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:group.action.ignoreAll')}</span>
+                            </Neos.Fusion.Form:Button>
+                        </Neos.Fusion.Form:Form>
+                    </div>
+                </div>
+            </summary>
+
+            <div class="link-checker-group__body">
+                <div class="link-checker-group__sources-label">
+                    <Neos.Fusion:Fragment @if={props.group.showSourceColumn}>{I18n.translate('NEOSidekick.LinkChecker:Modules:group.rows.pages')}</Neos.Fusion:Fragment>
+                    <Neos.Fusion:Fragment @if={!props.group.showSourceColumn}>{I18n.translate('NEOSidekick.LinkChecker:Modules:group.rows.targets')}</Neos.Fusion:Fragment>
+                </div>
+                <Neos.Fusion:Loop items={props.group.children} itemName="child">
+                    <NEOSidekick.LinkChecker:Component.Links.SourceRow child={child} group={props.group} hasMultipleDomains={props.hasMultipleDomains}/>
+                </Neos.Fusion:Loop>
+            </div>
+        </details>
+    `
+}
+
+prototype(NEOSidekick.LinkChecker:Component.Links.SourceRow) < prototype(Neos.Fusion:Component) {
+    child = null
+    group = null
+    hasMultipleDomains = false
+
+    deleteUri = Neos.Fusion:UriBuilder {
+        action = 'delete'
+    }
+    ignoreUri = Neos.Fusion:UriBuilder {
+        action = 'ignore'
+    }
+
+    renderer = afx`
+        <div class="link-checker-source-row">
+            <div class="link-checker-source-row__info">
+                <div @if={props.group.showSourceColumn} class="link-checker-source-row__source">
+                    <i class="fas fa-file-alt link-checker-source-row__icon"></i>
+                    <div class="link-checker-source-row__text">
+                        <div class="link-checker-source-row__line">
+                            <span class="link-checker-source-row__page" title={props.child.link.sourceLabel}>{props.child.link.sourcePageLabel}</span>
+                            <span @if={props.child.duplicateCount > 0} class="link-checker-duplicate-badge">+{props.child.duplicateCount}</span>
+                        </div>
+                        <span @if={props.group.showDomainPerRow} class="link-checker-source-row__domain" title={props.child.link.domain}>{props.child.link.domain}</span>
+                    </div>
+                </div>
+
+                <div @if={props.group.showTargetColumn} class="link-checker-source-row__target">
+                    <span class="link-checker-source-row__target-label" title={props.child.link.targetLabel}>{props.child.link.targetLabel}</span>
+                    <a @if={props.child.link.targetUri && props.child.link.targetType == 'internalNode'} href={props.child.link.targetUri} target="_blank" class="link-checker-icon-button" title={I18n.translate('NEOSidekick.LinkChecker:Modules:action.editTarget')}>
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <a @if={props.child.link.targetUri && props.child.link.targetType != 'internalNode'} href={props.child.link.targetUri} target="_blank" class="link-checker-icon-button" title={I18n.translate('NEOSidekick.LinkChecker:Modules:action.openTarget')}>
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>
+                </div>
+
+                <span @if={!props.group.showStatusInHeader && props.child.link.statusTranslationId} class={'link-checker-status link-checker-status--small link-checker-status--' + props.child.link.severity}>
+                    {I18n.translate('NEOSidekick.LinkChecker:Modules:' + props.child.link.statusTranslationId)}
+                </span>
+            </div>
+
+            <div class="link-checker-source-row__actions">
+                <div @if={props.group.showSourceColumn} class="link-checker-action-cluster">
+                    <a @if={props.child.link.sourceEditUri} href={props.child.link.sourceEditUri} target="_blank" class="link-checker-row-link" title={I18n.translate('NEOSidekick.LinkChecker:Modules:action.editSource')}>
+                        <i class="fas fa-edit"></i>
+                        <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:action.editSourceShort')}</span>
+                    </a>
+                    <a href={props.child.link.sourceFrontendUri} target="_blank" class="link-checker-row-link" title={I18n.translate('NEOSidekick.LinkChecker:Modules:action.openSource')}>
+                        <i class="fas fa-external-link-alt"></i>
+                        <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:action.openSourceShort')}</span>
+                    </a>
+                </div>
+                <span @if={props.group.showSourceColumn} class="link-checker-action-divider"></span>
+                <div class="link-checker-action-cluster">
+                    <Neos.Fusion.Form:Form form.target={props.deleteUri} attributes.class="neos-inline">
+                        <Neos.Fusion.Form:Input field.name="resultItem" field.value={props.child.link.resultItemId} attributes.type="hidden"/>
+                        <Neos.Fusion.Form:Button attributes.class="link-checker-row-action" attributes.title={I18n.translate('NEOSidekick.LinkChecker:Modules:list.action.delete')}>
+                            <i class="fas fa-check"></i>
+                            <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:list.action.deleteShort')}</span>
+                        </Neos.Fusion.Form:Button>
+                    </Neos.Fusion.Form:Form>
+                    <Neos.Fusion.Form:Form form.target={props.ignoreUri} attributes.class="neos-inline">
+                        <Neos.Fusion.Form:Input field.name="resultItem" field.value={props.child.link.resultItemId} attributes.type="hidden"/>
+                        <Neos.Fusion.Form:Button attributes.class="link-checker-row-action" attributes.title={I18n.translate('NEOSidekick.LinkChecker:Modules:list.action.ignore')}>
+                            <i class="fas fa-eye-slash"></i>
+                            <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:list.action.ignoreShort')}</span>
+                        </Neos.Fusion.Form:Button>
+                    </Neos.Fusion.Form:Form>
+                </div>
+            </div>
+        </div>
+    `
+}
+
 prototype(NEOSidekick.LinkChecker:Component.Links.List) < prototype(Neos.Fusion:Component) {
     links = ${[{}]}
 
@@ -26,60 +318,68 @@ prototype(NEOSidekick.LinkChecker:Component.Links.List) < prototype(Neos.Fusion:
 
 prototype(NEOSidekick.LinkChecker:Component.Links.List.Link) < prototype(Neos.Fusion:Component) {
     link = null
+    duplicateCount = 0
 
     deleteUri = Neos.Fusion:UriBuilder {
         action = 'delete'
-        arguments.resultItem = ${link.resultItem}
+        arguments.resultItem = ${props.link.resultItem}
     }
     ignoreUri = Neos.Fusion:UriBuilder {
         action = 'ignore'
-        arguments.resultItem = ${link.resultItem}
+        arguments.resultItem = ${props.link.resultItem}
     }
 
     renderer = afx`
         <tr>
-            <td class="link-checker-table__domain">
-                <span class="link-checker-table__text" title={link.domain}>{link.domain}</span>
+            <td class="link-checker-table__domain" data-label={I18n.translate('NEOSidekick.LinkChecker:Modules:domain')}>
+                <span class="link-checker-table__text" title={props.link.domain}>{props.link.domain}</span>
             </td>
-            <td class="link-checker-table__source">
+            <td class="link-checker-table__source" data-label={I18n.translate('NEOSidekick.LinkChecker:Modules:source')}>
                 <div class="link-checker-table__cell-content">
-                    <span class="link-checker-table__text" title={link.sourceLabel}>{link.sourceLabel}</span>
-                    <a @if={link.sourceEditUri} href={link.sourceEditUri} target="_blank" class="neos-button neos-button--small">
+                    <span class="link-checker-table__text" title={props.link.sourceLabel}>{props.link.sourceLabel}</span>
+                    <span @if={props.duplicateCount > 0} class="link-checker-duplicate-badge">+{props.duplicateCount}</span>
+                    <a @if={props.link.sourceEditUri} href={props.link.sourceEditUri} target="_blank" class="link-checker-row-link" title={I18n.translate('NEOSidekick.LinkChecker:Modules:action.editSource')}>
                         <i class="fas fa-edit"></i>
+                        <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:action.editSourceShort')}</span>
                     </a>
-                    <a href={link.sourceFrontendUri} target="_blank" class="neos-button neos-button--small">
+                    <a href={props.link.sourceFrontendUri} target="_blank" class="link-checker-row-link" title={I18n.translate('NEOSidekick.LinkChecker:Modules:action.openSource')}>
                         <i class="fas fa-external-link-alt"></i>
+                        <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:action.openSourceShort')}</span>
                     </a>
                 </div>
             </td>
-            <td class="link-checker-table__target">
+            <td class="link-checker-table__target" data-label={I18n.translate('NEOSidekick.LinkChecker:Modules:targetUriPath')}>
                 <div class="link-checker-table__cell-content">
-                    <Neos.Fusion:Fragment @if={link.targetUri}>
-                        <span class="link-checker-table__text" title={link.targetLabel}>{link.targetLabel}</span>
-                        <a href={link.targetUri} target="_blank" class="neos-button neos-button--small">
+                    <Neos.Fusion:Fragment @if={props.link.targetUri}>
+                        <span class="link-checker-table__text" title={props.link.targetLabel}>{props.link.targetLabel}</span>
+                        <a href={props.link.targetUri} target="_blank" class="link-checker-icon-button" title={I18n.translate('NEOSidekick.LinkChecker:Modules:action.openTarget')}>
                             <i class="fas fa-external-link-alt"></i>
                         </a>
                     </Neos.Fusion:Fragment>
-                    <span class="link-checker-table__text" title={link.targetFallbackLabel} @if={!link.targetUri}>{link.targetFallbackLabel}</span>
+                    <span class="link-checker-table__text" title={props.link.targetFallbackLabel} @if={!props.link.targetUri}>{props.link.targetFallbackLabel}</span>
                 </div>
             </td>
-            <td class="link-checker-table__status">{I18n.translate('NEOSidekick.LinkChecker:Modules:error.' + link.statusCode)}</td>
-            <td class="link-checker-table__date">{Date.format(link.checkedAt, 'd.m.Y H:i')}</td>
-            <td class="neos-action link-checker-table__actions">
-                <div class="neos-pull-right">
+            <td class="link-checker-table__status" data-label={I18n.translate('NEOSidekick.LinkChecker:Modules:error')}>{I18n.translate('NEOSidekick.LinkChecker:Modules:error.' + props.link.statusCode)}</td>
+            <td class="link-checker-table__date" data-label={I18n.translate('NEOSidekick.LinkChecker:Modules:foundAt')}>{Date.format(props.link.checkedAt, 'd.m.Y H:i')}</td>
+            <td class="neos-action link-checker-table__actions" data-label={I18n.translate('NEOSidekick.LinkChecker:Modules:actions')}>
+                <div class="link-checker-table__action-list">
                     <Neos.Fusion.Form:Form form.target={props.deleteUri} attributes.class="neos-inline">
                         <Neos.Fusion.Form:Button
+                            attributes.class="link-checker-row-action"
                             attributes.title={I18n.translate('NEOSidekick.LinkChecker:Modules:list.action.delete')}
                         >
                             <i class="fas fa-check"></i>
+                            <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:list.action.deleteShort')}</span>
                         </Neos.Fusion.Form:Button>
                     </Neos.Fusion.Form:Form>
 
                     <Neos.Fusion.Form:Form form.target={props.ignoreUri} attributes.class="neos-inline">
                         <Neos.Fusion.Form:Button
+                            attributes.class="link-checker-row-action"
                             attributes.title={I18n.translate('NEOSidekick.LinkChecker:Modules:list.action.ignore')}
                         >
                             <i class="fas fa-eye-slash"></i>
+                            <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:list.action.ignoreShort')}</span>
                         </Neos.Fusion.Form:Button>
                     </Neos.Fusion.Form:Form>
                 </div>

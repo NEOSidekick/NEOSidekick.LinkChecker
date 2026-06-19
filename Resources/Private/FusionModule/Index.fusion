@@ -1,7 +1,7 @@
 NEOSidekick.LinkChecker.Backend.ModuleController {
     index = afx`
         <NEOSidekick.LinkChecker:Component.FlashMessages flashMessages={flashMessages}/>
-        <NEOSidekick.LinkChecker:Backend.Module.Index links={links}/>
+        <NEOSidekick.LinkChecker:Backend.Module.Index links={links} groupedLinks={groupedLinks}/>
     `
 
     run = afx`

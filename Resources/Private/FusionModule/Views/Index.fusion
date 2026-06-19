@@ -1,5 +1,6 @@
 prototype(NEOSidekick.LinkChecker:Backend.Module.Index) < prototype(Neos.Fusion:Component) {
     links = '[]'
+    groupedLinks = null
 
     runAction = Neos.Fusion:UriBuilder {
         action = 'run'
@@ -8,9 +9,9 @@ prototype(NEOSidekick.LinkChecker:Backend.Module.Index) < prototype(Neos.Fusion:
     renderer = afx`
         <div class="neos-content neos-container-fluid">
             <div class="neos-row-fluid">
-                <NEOSidekick.LinkChecker:Component.Links.List links={props.links}/>
+                <NEOSidekick.LinkChecker:Component.Links.GroupedList groupedLinks={props.groupedLinks}/>
             </div>
-            <div class="neos-footer">
+            <div class="neos-footer link-checker-footer">
                 <Neos.Fusion.Form:Form form.target={props.runAction} attributes.class="neos-inline">
                     <Neos.Fusion.Form:Button
                         attributes.class="neos-button neos-button-primary"
