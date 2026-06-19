@@ -82,6 +82,10 @@ NEOSidekick:
           default:
             name: 'John Doe'
             address: 'recipient@example.com'
+        ccRecipient:
+          default:
+            name: 'Client'
+            address: 'client@example.com'
 ```
 
 ## Limitations and possible future Features:

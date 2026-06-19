@@ -44,6 +44,12 @@ class EmailService implements NotificationServiceInterface
 
     /**
      * @var array
+     * @Flow\InjectConfiguration(path="notifications.mail.ccRecipient")
+     */
+    protected $ccRecipient = [];
+
+    /**
+     * @var array
      * @Flow\InjectConfiguration(path="notifications.mail.template")
      */
     protected $template;
@@ -74,6 +80,7 @@ class EmailService implements NotificationServiceInterface
      * @param array $variables
      * @param string|array $sender
      * @param string|array $recipient
+     * @param string|array|null $ccRecipient
      * @return bool
      * @throws \Exception
      */
@@ -81,12 +88,14 @@ class EmailService implements NotificationServiceInterface
         string $subject,
         array $variables = [],
         $sender = 'default',
-        $recipient = 'default'
+        $recipient = 'default',
+        $ccRecipient = 'default'
     ): bool {
         $plainTextBody = $this->renderEmailBody('txt', $variables);
         $htmlBody = $this->renderEmailBody('html', $variables);
         $senderAddress = $this->resolveSenderAddress($sender);
         $recipientAddress = $this->resolveRecipientAddress($recipient);
+        $ccRecipientAddress = $this->resolveCcRecipientAddress($ccRecipient);
 
         $mail = new Message();
         $mail->setFrom($senderAddress)
@@ -94,6 +103,10 @@ class EmailService implements NotificationServiceInterface
             ->setSubject($subject)
             ->setBody($plainTextBody)
             ->addPart($htmlBody, 'text/html');
+
+        if ($ccRecipientAddress !== []) {
+            $mail->setCc($ccRecipientAddress);
+        }
 
         return $this->sendMail($mail);
     }
@@ -139,6 +152,21 @@ class EmailService implements NotificationServiceInterface
     }
 
     /**
+     * @param array|string|null $ccRecipient
+     * @return array
+     */
+    protected function resolveCcRecipientAddress($ccRecipient): array
+    {
+        if ($ccRecipient === null || $ccRecipient === []) {
+            return [];
+        }
+        if ($ccRecipient === 'default' && !isset($this->ccRecipient['default'])) {
+            return [];
+        }
+        return $this->resolveAddress($ccRecipient, $this->ccRecipient, 'ccRecipientAddresses');
+    }
+
+    /**
      * @param array|string $addressKeyOrAddresses
      * @param array $addressesConfig
      * @param string $description
@@ -170,7 +198,7 @@ class EmailService implements NotificationServiceInterface
      */
     protected function sendMail(Message $mail): bool
     {
-        $allRecipients = $mail->getTo();
+        $allRecipients = array_merge($mail->getTo() ?? [], $mail->getCc() ?? [], $mail->getBcc() ?? []);
         $totalNumberOfRecipients = \count($allRecipients);
         $actualNumberOfRecipients = 0;
         $exceptionMessage = '';
@@ -188,6 +216,7 @@ class EmailService implements NotificationServiceInterface
 
         $emailInfo = [
             'recipients' => array_keys($mail->getTo()),
+            'ccRecipients' => array_keys($mail->getCc() ?? []),
             'failedRecipients' => $mail->getFailedRecipients(),
             'subject' => $mail->getSubject(),
             'id' => (string)$mail->getHeaders()->get('Message-ID')

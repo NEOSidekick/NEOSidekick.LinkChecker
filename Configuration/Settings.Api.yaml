@@ -29,6 +29,7 @@ NEOSidekick:
           default:
             name: 'CodeQ'
             address: 'test@example.com'
+        ccRecipient: []
         template:
           package: 'NEOSidekick.LinkChecker'
           file: 'NotificationMail'
