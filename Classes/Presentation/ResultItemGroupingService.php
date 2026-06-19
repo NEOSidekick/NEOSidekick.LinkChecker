@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NEOSidekick\LinkChecker\Presentation;
 
+use NEOSidekick\LinkChecker\Domain\Model\ResultItem;
 use Neos\Flow\Annotations as Flow;
 
 /**
@@ -188,7 +189,7 @@ class ResultItemGroupingService
             self::MODE_SOURCE => 'source|' . $this->sourceKey($link),
             self::MODE_DOMAIN => 'domain|' . $link->getDomain(),
             self::MODE_STATUS => 'status|' . $link->getStatusCode(),
-            default => 'target|' . $link->getTargetFallbackLabel() . '|' . $link->getStatusCode(),
+            default => 'target|' . $this->issueKey($link),
         };
     }
 
@@ -260,6 +261,15 @@ class ResultItemGroupingService
         return 'otherProtocol';
     }
 
+    private function issueKey(ResultItemView $link): string
+    {
+        return ResultItem::createIssueFingerprint(
+            $link->getDomain(),
+            $link->getTarget(),
+            $link->getStatusCode()
+        );
+    }
+
     private function compareGroups(ResultItemGroupView $left, ResultItemGroupView $right): int
     {
         return $right->getAffectedSourceCount() <=> $left->getAffectedSourceCount()
@@ -328,11 +338,7 @@ class ResultItemGroupingService
      */
     private function createTargetTypeOptions(array $links): array
     {
-        $counts = ['all' => \count($links)];
-        foreach ($links as $link) {
-            $type = $this->targetType($link);
-            $counts[$type] = ($counts[$type] ?? 0) + 1;
-        }
+        $counts = $this->createIssueCountsBy($links, fn (ResultItemView $link) => $this->targetType($link));
 
         return [
             new ResultItemFilterOptionView('all', 'All target types', 'filter.allTargetTypes', $counts['all']),
@@ -348,11 +354,7 @@ class ResultItemGroupingService
      */
     private function createDomainOptions(array $links): array
     {
-        $counts = ['all' => \count($links)];
-        foreach ($links as $link) {
-            $domain = $link->getDomain();
-            $counts[$domain] = ($counts[$domain] ?? 0) + 1;
-        }
+        $counts = $this->createIssueCountsBy($links, fn (ResultItemView $link) => $link->getDomain());
         ksort($counts);
 
         $options = [new ResultItemFilterOptionView('all', 'All domains', 'filter.allDomains', $counts['all'])];
@@ -372,11 +374,7 @@ class ResultItemGroupingService
      */
     private function createStatusOptions(array $links): array
     {
-        $counts = ['all' => \count($links)];
-        foreach ($links as $link) {
-            $statusCode = (string)$link->getStatusCode();
-            $counts[$statusCode] = ($counts[$statusCode] ?? 0) + 1;
-        }
+        $counts = $this->createIssueCountsBy($links, fn (ResultItemView $link) => (string)$link->getStatusCode());
         ksort($counts, SORT_NUMERIC);
 
         $options = [new ResultItemFilterOptionView('all', 'All statuses', 'filter.allStatuses', $counts['all'])];
@@ -431,5 +429,29 @@ class ResultItemGroupingService
             '490' => 'filter.status.490',
             default => 'error.' . $statusCode,
         };
+    }
+
+    /**
+     * @param array<ResultItemView> $links
+     * @return array<string, int>
+     */
+    private function createIssueCountsBy(array $links, callable $classifier): array
+    {
+        $issuesByClassifier = ['all' => []];
+
+        foreach ($links as $link) {
+            $classifierKey = (string)$classifier($link);
+            $issueKey = $this->issueKey($link);
+
+            $issuesByClassifier['all'][$issueKey] = true;
+            $issuesByClassifier[$classifierKey][$issueKey] = true;
+        }
+
+        $counts = [];
+        foreach ($issuesByClassifier as $classifierKey => $issues) {
+            $counts[$classifierKey] = \count($issues);
+        }
+
+        return $counts + ['all' => 0];
     }
 }

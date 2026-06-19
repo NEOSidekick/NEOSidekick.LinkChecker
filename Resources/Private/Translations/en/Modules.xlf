@@ -298,6 +298,30 @@
                     <source>{0} invalid links found</source>
                 </trans-unit>
             </group>
+            <group id="issuesFound" restype="x-gettext-plurals">
+                <trans-unit id="issuesFound[0]" >
+                    <source>{0} invalid link found</source>
+                </trans-unit>
+                <trans-unit id="issuesFound[1]" >
+                    <source>{0} invalid links found</source>
+                </trans-unit>
+            </group>
+            <group id="occurrencesFound" restype="x-gettext-plurals">
+                <trans-unit id="occurrencesFound[0]" >
+                    <source>({0} occurrence)</source>
+                </trans-unit>
+                <trans-unit id="occurrencesFound[1]" >
+                    <source>({0} occurrences)</source>
+                </trans-unit>
+            </group>
+            <group id="group.appearsOnPages" restype="x-gettext-plurals">
+                <trans-unit id="group.appearsOnPages[0]" >
+                    <source>Found on {0} page</source>
+                </trans-unit>
+                <trans-unit id="group.appearsOnPages[1]" >
+                    <source>Found on {0} pages</source>
+                </trans-unit>
+            </group>
         </body>
     </file>
 </xliff>

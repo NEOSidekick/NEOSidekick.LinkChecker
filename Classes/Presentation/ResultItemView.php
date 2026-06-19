@@ -49,6 +49,11 @@ final class ResultItemView
         return $this->targetLabel;
     }
 
+    public function getTarget(): string
+    {
+        return $this->resultItem->getTarget();
+    }
+
     public function getTargetUri(): ?string
     {
         return $this->targetUri;
@@ -67,5 +72,11 @@ final class ResultItemView
     public function getCheckedAt(): DateTimeInterface
     {
         return $this->resultItem->getCheckedAt();
+    }
+
+    public function isInternalTarget(): bool
+    {
+        $target = $this->resultItem->getTarget();
+        return str_starts_with($target, 'node://') || str_starts_with($target, '/');
     }
 }

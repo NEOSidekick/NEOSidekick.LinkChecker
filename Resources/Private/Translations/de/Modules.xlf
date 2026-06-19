@@ -298,6 +298,30 @@
                     <source>{0} ungültige Links gefunden</source>
                 </trans-unit>
             </group>
+            <group id="issuesFound" restype="x-gettext-plurals">
+                <trans-unit id="issuesFound[0]" >
+                    <source>{0} ungültigen Link gefunden</source>
+                </trans-unit>
+                <trans-unit id="issuesFound[1]" >
+                    <source>{0} ungültige Links gefunden</source>
+                </trans-unit>
+            </group>
+            <group id="occurrencesFound" restype="x-gettext-plurals">
+                <trans-unit id="occurrencesFound[0]" >
+                    <source>({0} Vorkommen)</source>
+                </trans-unit>
+                <trans-unit id="occurrencesFound[1]" >
+                    <source>({0} Vorkommen)</source>
+                </trans-unit>
+            </group>
+            <group id="group.appearsOnPages" restype="x-gettext-plurals">
+                <trans-unit id="group.appearsOnPages[0]" >
+                    <source>Auf {0} Seite gefunden</source>
+                </trans-unit>
+                <trans-unit id="group.appearsOnPages[1]" >
+                    <source>Auf {0} Seiten gefunden</source>
+                </trans-unit>
+            </group>
         </body>
     </file>
 </xliff>

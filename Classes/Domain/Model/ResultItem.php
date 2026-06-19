@@ -91,6 +91,15 @@ class ResultItem implements \JsonSerializable
         ], JSON_THROW_ON_ERROR));
     }
 
+    public static function createIssueFingerprint(string $domain, string $target, int $statusCode): string
+    {
+        return hash('sha256', json_encode([
+            'domain' => self::normalizeDomain($domain),
+            'target' => self::normalizeUriLikeValue($target),
+            'statusCode' => $statusCode,
+        ], JSON_THROW_ON_ERROR));
+    }
+
     public function refreshFingerprint(): void
     {
         $this->fingerprint = self::createFingerprint(
@@ -249,6 +258,7 @@ class ResultItem implements \JsonSerializable
     {
         return [
             'fingerprint' => $this->getFingerprint(),
+            'issueFingerprint' => self::createIssueFingerprint($this->domain, $this->target, $this->statusCode),
             'domain' => $this->getDomain(),
             'source' => $this->getSource(),
             'sourcePath' => $this->getSourcePath(),

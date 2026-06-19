@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace NEOSidekick\LinkChecker\Presentation;
 
-use NEOSidekick\LinkChecker\Infrastructure\DomainService;
-use Neos\ContentRepository\Domain\Model\NodeInterface;
-use Neos\ContentRepository\Domain\Projection\Content\TraversableNodeInterface;
-use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\Flow\Annotations as Flow;
 
 /**
@@ -16,25 +12,13 @@ use Neos\Flow\Annotations as Flow;
 class LinkHealthScoreService
 {
     /**
-     * @var DomainService
-     * @Flow\Inject
-     */
-    protected $domainService;
-
-    /**
-     * @var ContextFactoryInterface
-     * @Flow\Inject
-     */
-    protected $contextFactory;
-
-    /**
      * @param array<ResultItemView> $links
      */
     public function create(array $links): array
     {
         $affectedSourcePageCount = $this->countAffectedSourcePages($links);
-        $totalInternalPageCount = $this->countLiveInternalPages();
-        $scoreDenominator = max($totalInternalPageCount, $affectedSourcePageCount);
+        $totalInternalPageCount = 0;
+        $scoreDenominator = max(100, $affectedSourcePageCount);
         $score = $scoreDenominator > 0
             ? (int)max(0, min(100, round((($scoreDenominator - $affectedSourcePageCount) / $scoreDenominator) * 100)))
             : 100;
@@ -69,42 +53,6 @@ class LinkHealthScoreService
             $link->getResultItem()->getSource() ?? '',
             $link->getResultItem()->getSourcePath() ?? $link->getSourceFrontendUri(),
         ]);
-    }
-
-    private function countLiveInternalPages(): int
-    {
-        $count = 0;
-
-        foreach ($this->domainService->findAllSitesPrimaryDomain() as $domain) {
-            $context = $this->contextFactory->create([
-                'workspaceName' => 'live',
-                'currentSite' => $domain->getSite(),
-                'currentDomain' => $domain,
-                'invisibleContentShown' => false,
-                'inaccessibleContentShown' => false,
-                'removedContentShown' => false,
-            ]);
-
-            $siteNode = $context->getCurrentSiteNode();
-            if ($siteNode instanceof NodeInterface || $siteNode instanceof TraversableNodeInterface) {
-                $count += $this->countDocumentNodes($siteNode);
-            }
-        }
-
-        return $count;
-    }
-
-    private function countDocumentNodes(NodeInterface|TraversableNodeInterface $node): int
-    {
-        $count = $node->getNodeType()->isOfType('Neos.Neos:Document') ? 1 : 0;
-
-        foreach ($node->findChildNodes() as $childNode) {
-            if ($childNode instanceof NodeInterface || $childNode instanceof TraversableNodeInterface) {
-                $count += $this->countDocumentNodes($childNode);
-            }
-        }
-
-        return $count;
     }
 
     private function level(int $score): string

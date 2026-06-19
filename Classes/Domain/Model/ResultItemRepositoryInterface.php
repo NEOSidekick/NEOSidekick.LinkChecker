@@ -10,6 +10,11 @@ interface ResultItemRepositoryInterface
 
     public function remove(ResultItem $resultItem): void;
 
+    /**
+     * @return ResultItem[]
+     */
+    public function findByDomainTargetAndStatusCode(string $domain, string $target, int $statusCode): array;
+
     public function truncate(): void;
 
     public function removeAllNonIgnored(): void;

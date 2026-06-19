@@ -41,6 +41,42 @@ class ResultItemGroupingServiceTest extends UnitTestCase
     }
 
     /** @test */
+    public function targetGroupingKeepsSameTargetSeparatePerDomain(): void
+    {
+        $links = [
+            $this->createLink('www.neos.eu', '/sites/www/a', 'https://example.com/missing', 404),
+            $this->createLink('lab.neos.eu', '/sites/lab/a', 'https://example.com/missing', 404),
+        ];
+
+        $list = $this->service->group($links, ResultItemGroupingService::MODE_TARGET, 'all', 'all', 'all', ResultItemGroupingService::IMPACT_ALL);
+
+        self::assertSame(2, $list->getGroupCount());
+        self::assertSame(2, $list->getRawCount());
+    }
+
+    /** @test */
+    public function facetOptionsCountTargetIssuesNotSourceOccurrences(): void
+    {
+        $links = [
+            $this->createLink('www.neos.eu', '/sites/www/a', 'https://example.com/missing', 404),
+            $this->createLink('www.neos.eu', '/sites/www/b', 'https://example.com/missing', 404),
+            $this->createLink('www.neos.eu', '/sites/www/c', 'node://missing', 404),
+        ];
+
+        $list = $this->service->group($links, ResultItemGroupingService::MODE_TARGET, 'all', 'all', 'all', ResultItemGroupingService::IMPACT_ALL);
+
+        self::assertSame(2, $list->getGroupCount());
+        self::assertSame(3, $list->getRawCount());
+        self::assertSame(2, $this->countForOption($list->getTargetTypeOptions(), 'all'));
+        self::assertSame(1, $this->countForOption($list->getTargetTypeOptions(), 'externalUrl'));
+        self::assertSame(1, $this->countForOption($list->getTargetTypeOptions(), 'internalNode'));
+        self::assertSame(2, $this->countForOption($list->getDomainOptions(), 'all'));
+        self::assertSame(2, $this->countForOption($list->getDomainOptions(), 'www.neos.eu'));
+        self::assertSame(2, $this->countForOption($list->getStatusOptions(), 'all'));
+        self::assertSame(2, $this->countForOption($list->getStatusOptions(), '404'));
+    }
+
+    /** @test */
     public function sameTargetWithMixedStatusesCreatesSeparateGroups(): void
     {
         $links = [
@@ -161,5 +197,16 @@ class ResultItemGroupingServiceTest extends UnitTestCase
             $target,
             str_starts_with($target, 'http') ? $target : null
         );
+    }
+
+    private function countForOption(array $options, string $identifier): int
+    {
+        foreach ($options as $option) {
+            if ($option->getIdentifier() === $identifier) {
+                return $option->getCount();
+            }
+        }
+
+        self::fail(sprintf('Missing option "%s"', $identifier));
     }
 }

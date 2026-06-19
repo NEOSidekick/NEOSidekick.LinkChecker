@@ -71,6 +71,19 @@ class ResultItemTest extends UnitTestCase
     }
 
     /** @test */
+    public function issueFingerprintIgnoresSourceOccurrence(): void
+    {
+        $first = $this->createResultItem('example.com', null, 'https://example.com/a', 'https://target.example/b', 404);
+        $second = $this->createResultItem('example.com', null, 'https://example.com/c', 'https://target.example/b', 404);
+
+        self::assertNotSame($first->getFingerprint(), $second->getFingerprint());
+        self::assertSame(
+            ResultItem::createIssueFingerprint($first->getDomain(), $first->getTarget(), $first->getStatusCode()),
+            ResultItem::createIssueFingerprint($second->getDomain(), $second->getTarget(), $second->getStatusCode())
+        );
+    }
+
+    /** @test */
     public function mergePreservesEarliestCreatedAtLatestCheckedAtAndRicherFields(): void
     {
         $existing = $this->createResultItem(

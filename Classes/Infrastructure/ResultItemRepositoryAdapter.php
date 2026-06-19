@@ -12,6 +12,7 @@ use Neos\Flow\Persistence\Exception\IllegalObjectTypeException;
 use Neos\Flow\Persistence\QueryInterface;
 use Neos\Flow\Persistence\QueryResultInterface;
 use Neos\Flow\Persistence\Repository;
+use Throwable;
 
 /**
  * @Flow\Scope("singleton")
@@ -33,6 +34,8 @@ class ResultItemRepositoryAdapter extends Repository implements ResultItemReposi
 
     public function findAll(): QueryResultInterface
     {
+        $this->ensureDatabaseConnection();
+
         $query = $this->createQuery();
         $query->matching($query->equals('ignore', 0));
         $query->setOrderings(
@@ -48,9 +51,27 @@ class ResultItemRepositoryAdapter extends Repository implements ResultItemReposi
         parent::remove($resultItem);
     }
 
+    public function findByDomainTargetAndStatusCode(string $domain, string $target, int $statusCode): array
+    {
+        $this->ensureDatabaseConnection();
+
+        $query = $this->createQuery();
+        $query->matching(
+            $query->logicalAnd([
+                $query->equals('ignore', false),
+                $query->equals('domain', $domain),
+                $query->equals('target', $target),
+                $query->equals('statusCode', $statusCode),
+            ])
+        );
+
+        return $query->execute()->toArray();
+    }
+
     public function truncate(): void
     {
         $this->resultItemsByFingerprint = [];
+        $this->ensureDatabaseConnection();
 
         // https://neos-project.slack.com/archives/C04V4C6B0/p1668168503014459
         $qB = $this->entityManager->createQueryBuilder()
@@ -63,6 +84,7 @@ class ResultItemRepositoryAdapter extends Repository implements ResultItemReposi
     public function removeAllNonIgnored(): void
     {
         $this->resultItemsByFingerprint = [];
+        $this->ensureDatabaseConnection();
 
         $query = $this->createQuery();
         $query->matching($query->equals('ignore', false));
@@ -86,6 +108,8 @@ class ResultItemRepositoryAdapter extends Repository implements ResultItemReposi
      */
     public function add($resultItem): void
     {
+        $this->ensureDatabaseConnection();
+
         $resultItem->refreshFingerprint();
         $fingerprint = $resultItem->getFingerprint();
 
@@ -97,7 +121,7 @@ class ResultItemRepositoryAdapter extends Repository implements ResultItemReposi
             // identity-relevant fields and recompute it.
             $this->resultItemsByFingerprint[$existingResultItem->getFingerprint()] = $existingResultItem;
             $this->update($existingResultItem);
-            $this->persistenceManager->persistAll();
+            $this->persistAllWithFreshConnection();
             return;
         }
 
@@ -108,10 +132,23 @@ class ResultItemRepositoryAdapter extends Repository implements ResultItemReposi
         // result with the same fingerprint (e.g. two URLs that normalize equally)
         // would schedule a second insert and violate the unique index on flush.
         // add() is only called for broken links, so the number of flushes stays small.
-        $this->persistenceManager->persistAll();
+        $this->persistAllWithFreshConnection();
     }
 
     private function findOneByFingerprint(string $fingerprint, bool $cacheResult = false): ?ResultItem
+    {
+        $this->ensureDatabaseConnection();
+
+        try {
+            return $this->executeFindOneByFingerprint($fingerprint, $cacheResult);
+        } catch (Throwable $exception) {
+            $this->reconnectDatabase();
+
+            return $this->executeFindOneByFingerprint($fingerprint, $cacheResult);
+        }
+    }
+
+    private function executeFindOneByFingerprint(string $fingerprint, bool $cacheResult): ?ResultItem
     {
         $query = $this->createQuery();
 
@@ -119,5 +156,34 @@ class ResultItemRepositoryAdapter extends Repository implements ResultItemReposi
             ->matching($query->equals('fingerprint', $fingerprint))
             ->execute($cacheResult)
             ->getFirst();
+    }
+
+    private function persistAllWithFreshConnection(): void
+    {
+        $this->ensureDatabaseConnection();
+        $this->persistenceManager->persistAll();
+    }
+
+    private function ensureDatabaseConnection(): void
+    {
+        $connection = $this->entityManager->getConnection();
+
+        try {
+            if (!$connection->isConnected()) {
+                $connection->connect();
+                return;
+            }
+
+            $connection->executeQuery('SELECT 1')->free();
+        } catch (Throwable $exception) {
+            $this->reconnectDatabase();
+        }
+    }
+
+    private function reconnectDatabase(): void
+    {
+        $connection = $this->entityManager->getConnection();
+        $connection->close();
+        $connection->connect();
     }
 }

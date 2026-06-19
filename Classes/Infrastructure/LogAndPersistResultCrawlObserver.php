@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NEOSidekick\LinkChecker\Infrastructure;
 
+use GuzzleHttp\Client;
 use NEOSidekick\LinkChecker\Domain\Model\ResultItem;
 use NEOSidekick\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
 use Neos\Flow\Annotations as Flow;
@@ -12,7 +13,9 @@ use Neos\Flow\Persistence\Exception\IllegalObjectTypeException;
 use Psr\Http\Message\UriInterface;
 use Psr\Http\Message\ResponseInterface;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\RequestOptions;
 use Spatie\Crawler\CrawlObservers\CrawlObserver;
+use Throwable;
 
 class LogAndPersistResultCrawlObserver extends CrawlObserver
 {
@@ -36,10 +39,19 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
     protected array $resultItemsGroupedByStatusCode = [];
 
     /**
+     * @var array<string, array<int, array{url: UriInterface, originUrl: UriInterface, statusCode: int}>>
+     */
+    protected array $pendingServerErrorResultsByTarget = [];
+
+    private ?Client $revalidationClient = null;
+
+    /**
      * Called when the crawl has ended.
      */
     public function finishedCrawling(): void
     {
+        $this->persistPendingServerErrorResults();
+
         $this->outputLine('');
         $this->outputLine('Summary:');
         $this->outputLine('--------');
@@ -113,7 +125,8 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
         ?UriInterface $foundOnUrl = null,
         ?string $linkText = null
     ): void {
-        $statusCode = (int)$requestException->getCode();
+        $response = $requestException->getResponse();
+        $statusCode = $response instanceof ResponseInterface ? $response->getStatusCode() : (int)$requestException->getCode();
         if (!$this->isExcludedStatusCode($statusCode)) {
             $this->addCrawlingResultToStore($url, $foundOnUrl, $statusCode);
         }
@@ -146,12 +159,98 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
 
         $parts = parse_url((string)$originUrl);
 
-        if ($parts === false) {
+        if ($parts === false || !isset($parts['host'])) {
             return;
         }
 
+        if ($statusCode >= 500) {
+            $this->pendingServerErrorResultsByTarget[(string)$crawlingUrl][] = [
+                'url' => $crawlingUrl,
+                'originUrl' => $originUrl,
+                'statusCode' => $statusCode,
+            ];
+            return;
+        }
+
+        $this->persistCrawlingResult($crawlingUrl, $originUrl, $statusCode, $parts['host']);
+    }
+
+    protected function persistPendingServerErrorResults(): void
+    {
+        if ($this->pendingServerErrorResultsByTarget === []) {
+            return;
+        }
+
+        foreach ($this->pendingServerErrorResultsByTarget as $target => $pendingResults) {
+            $finalStatusCode = $this->revalidateStatusCode($pendingResults[0]['url'], $pendingResults[0]['statusCode']);
+            $this->outputLine(sprintf(
+                'Revalidated %s from %s to %s',
+                $target,
+                $pendingResults[0]['statusCode'],
+                $finalStatusCode
+            ));
+
+            if ($finalStatusCode === 200 || $this->isExcludedStatusCode($finalStatusCode)) {
+                continue;
+            }
+
+            foreach ($pendingResults as $pendingResult) {
+                $parts = parse_url((string)$pendingResult['originUrl']);
+                if ($parts === false || !isset($parts['host'])) {
+                    continue;
+                }
+
+                $this->persistCrawlingResult(
+                    $pendingResult['url'],
+                    $pendingResult['originUrl'],
+                    $finalStatusCode,
+                    $parts['host']
+                );
+            }
+        }
+
+        $this->pendingServerErrorResultsByTarget = [];
+    }
+
+    protected function revalidateStatusCode(UriInterface $url, int $originalStatusCode): int
+    {
+        try {
+            return $this->getRevalidationClient()
+                ->request('GET', (string)$url)
+                ->getStatusCode();
+        } catch (RequestException $exception) {
+            $response = $exception->getResponse();
+            if ($response instanceof ResponseInterface) {
+                return $response->getStatusCode();
+            }
+
+            return (int)$exception->getCode();
+        } catch (Throwable $exception) {
+            return 0;
+        }
+    }
+
+    private function getRevalidationClient(): Client
+    {
+        if ($this->revalidationClient === null) {
+            $this->revalidationClient = new Client([
+                RequestOptions::ALLOW_REDIRECTS => false,
+                RequestOptions::CONNECT_TIMEOUT => 10,
+                RequestOptions::TIMEOUT => 30,
+            ]);
+        }
+
+        return $this->revalidationClient;
+    }
+
+    private function persistCrawlingResult(
+        UriInterface $crawlingUrl,
+        UriInterface $originUrl,
+        int $statusCode,
+        string $domain
+    ): void {
         $linkCheckItem = new ResultItem();
-        $linkCheckItem->setDomain($parts['host']);
+        $linkCheckItem->setDomain($domain);
         $linkCheckItem->setSourcePath((string)$originUrl);
         $linkCheckItem->setTarget((string)$crawlingUrl);
         $linkCheckItem->setStatusCode($statusCode);

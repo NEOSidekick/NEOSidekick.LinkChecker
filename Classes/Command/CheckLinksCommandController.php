@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace NEOSidekick\LinkChecker\Command;
 
+use Doctrine\ORM\EntityManagerInterface;
 use NEOSidekick\LinkChecker\Domain\Crawler\ContentNodeCrawler;
 use NEOSidekick\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
 use NEOSidekick\LinkChecker\Infrastructure\DomainService;
@@ -91,6 +92,56 @@ class CheckLinksCommandController extends CommandController
      * @Flow\Inject
      */
     protected $persistenceManager;
+
+    /**
+     * @var EntityManagerInterface
+     * @Flow\Inject
+     */
+    protected $entityManager;
+
+    /**
+     * Audit stored link checker results.
+     */
+    public function auditCommand(): void
+    {
+        $connection = $this->entityManager->getConnection();
+        $tableName = 'neosidekick_linkchecker_domain_model_resultitem';
+
+        $totalRows = (int)$connection->fetchOne("SELECT COUNT(*) FROM {$tableName}");
+        $activeRows = (int)$connection->fetchOne("SELECT COUNT(*) FROM {$tableName} WHERE `ignore` = 0");
+        $ignoredRows = (int)$connection->fetchOne("SELECT COUNT(*) FROM {$tableName} WHERE `ignore` = 1");
+        $distinctFingerprints = (int)$connection->fetchOne(
+            "SELECT COUNT(DISTINCT fingerprint) FROM {$tableName} WHERE fingerprint IS NOT NULL AND fingerprint <> ''"
+        );
+        $duplicateFingerprintGroups = (int)$connection->fetchOne(
+            "SELECT COUNT(*) FROM (
+                SELECT fingerprint
+                FROM {$tableName}
+                WHERE fingerprint IS NOT NULL AND fingerprint <> ''
+                GROUP BY fingerprint
+                HAVING COUNT(*) > 1
+            ) duplicate_fingerprints"
+        );
+        $activeTargetLevelIssues = (int)$connection->fetchOne(
+            "SELECT COUNT(DISTINCT CONCAT_WS('|', COALESCE(domain, ''), COALESCE(target, ''), COALESCE(statuscode, '')))
+            FROM {$tableName}
+            WHERE `ignore` = 0"
+        );
+        $activeServerErrorRows = (int)$connection->fetchOne(
+            "SELECT COUNT(*) FROM {$tableName} WHERE `ignore` = 0 AND statuscode >= 500"
+        );
+
+        $this->outputLine('Link checker audit');
+        $this->outputLine('------------------');
+        $this->outputLine(sprintf('Rows total: %d', $totalRows));
+        $this->outputLine(sprintf('Rows active: %d', $activeRows));
+        $this->outputLine(sprintf('Rows ignored: %d', $ignoredRows));
+        $this->outputLine(sprintf('Distinct fingerprints: %d', $distinctFingerprints));
+        $this->outputLine(sprintf('Duplicate fingerprint groups: %d', $duplicateFingerprintGroups));
+        $this->outputLine(sprintf('Target-level active issues: %d', $activeTargetLevelIssues));
+        $this->outputLine(sprintf('Source occurrences: %d', $activeRows));
+        $this->outputLine(sprintf('Active 5xx rows after revalidation: %d', $activeServerErrorRows));
+    }
 
     /**
      * Clear all stored errors
