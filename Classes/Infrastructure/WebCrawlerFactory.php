@@ -4,8 +4,11 @@ namespace NEOSidekick\LinkChecker\Infrastructure;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
+use GuzzleHttp\Promise\Create;
+use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\RequestOptions;
 use Neos\Flow\Annotations as Flow;
 use Psr\Http\Message\RequestInterface;
@@ -25,7 +28,50 @@ class WebCrawlerFactory
      */
     protected $settings;
 
-    public function createCrawler(CrawlProfile $crawlProfile, CrawlObserver $crawlObserver): Crawler
+    /**
+     * @Flow\InjectConfiguration(path="performance")
+     * @var array
+     */
+    protected $performance = [];
+
+    /**
+     * @var LinkTargetCache
+     * @Flow\Inject
+     */
+    protected $linkTargetCache;
+
+    public function createCrawler(CrawlProfile $crawlProfile, CrawlObserver $crawlObserver, ?string $baseHost = null): Crawler
+    {
+        $userAgent = $this->resolveUserAgent();
+        $crawler = new Crawler($this->createClient($baseHost));
+
+        if ($userAgent !== '') {
+            $crawler->setUserAgent($userAgent);
+        }
+
+        $crawler->setCrawlObserver($crawlObserver);
+        $crawler->setCrawlProfile($crawlProfile);
+
+        // Cap the number of body bytes read per page to bound memory on large documents.
+        $maximumResponseSize = (int)($this->performance['maximumResponseSize'] ?? 0);
+        if ($maximumResponseSize > 0) {
+            $crawler->setMaximumResponseSize($maximumResponseSize);
+        }
+
+        $concurrency = 10;
+        if (isset($this->settings['concurrency']) && (int)$this->settings['concurrency'] >= 0) {
+            $concurrency = (int)$this->settings['concurrency'];
+        }
+        $crawler->setConcurrency($concurrency);
+
+        if (!isset($this->settings['ignoreRobots']) || $this->settings['ignoreRobots']) {
+            $crawler->ignoreRobots();
+        }
+
+        return $crawler;
+    }
+
+    private function createClient(?string $baseHost = null): Client
     {
         // If no this->settings are configured we just set timeout and allow_redirect.
         $clientOptions = [
@@ -66,28 +112,28 @@ class WebCrawlerFactory
             );
         }
 
+        // The following middlewares only make sense relative to the site being crawled, so they are
+        // skipped when no base host is known (e.g. when the client is reused for other purposes).
+        $baseHost = $baseHost !== null ? strtolower(trim($baseHost)) : '';
+        if ($baseHost !== '') {
+            $requestsPerSecond = (float)($this->performance['perHostRequestsPerSecond'] ?? 0);
+            if ($requestsPerSecond > 0) {
+                $handler->push($this->createPerHostRateLimitMiddleware($baseHost, $requestsPerSecond));
+            }
+
+            if (($this->performance['headFirst'] ?? false) === true) {
+                $rangeBytes = (int)($this->performance['externalRangeBytes'] ?? 0);
+                $handler->push($this->createHeadFirstMiddleware($baseHost, $rangeBytes));
+            }
+
+            if ($this->linkTargetCache->isEnabled()) {
+                $handler->push($this->createResultCacheMiddleware($baseHost));
+            }
+        }
+
         $clientOptions["handler"] = $handler;
 
-        $crawler = new Crawler(new Client($clientOptions));
-
-        if ($userAgent !== '') {
-            $crawler->setUserAgent($userAgent);
-        }
-
-        $crawler->setCrawlObserver($crawlObserver);
-        $crawler->setCrawlProfile($crawlProfile);
-
-        $concurrency = 10;
-        if (isset($this->settings['concurrency']) && (int)$this->settings['concurrency'] >= 0) {
-            $concurrency = (int)$this->settings['concurrency'];
-        }
-        $crawler->setConcurrency($concurrency);
-
-        if (!isset($this->settings['ignoreRobots']) || $this->settings['ignoreRobots']) {
-            $crawler->ignoreRobots();
-        }
-
-        return $crawler;
+        return new Client($clientOptions);
     }
 
     /**
@@ -198,5 +244,113 @@ class WebCrawlerFactory
         }
 
         return min($deltaSeconds, 60) * 1000;
+    }
+
+    /**
+     * For external links we only need the status code, so issue a cheap HEAD request and add a byte
+     * range cap. Many servers wrongly reject HEAD with 403/405/501; in that case we fall back to GET.
+     * Internal pages keep using GET because their body is required for link discovery.
+     */
+    private function createHeadFirstMiddleware(string $baseHost, int $externalRangeBytes): callable
+    {
+        return static function (callable $handler) use ($baseHost, $externalRangeBytes): callable {
+            return static function (RequestInterface $request, array $options) use ($handler, $baseHost, $externalRangeBytes) {
+                if (strtolower($request->getUri()->getHost()) === $baseHost) {
+                    return $handler($request, $options);
+                }
+
+                if ($externalRangeBytes > 0) {
+                    // bytes=0-N always has a satisfiable start, so this never triggers a 416 response.
+                    $request = $request->withHeader('Range', 'bytes=0-' . $externalRangeBytes);
+                }
+
+                if ($request->getMethod() !== 'GET') {
+                    return $handler($request, $options);
+                }
+
+                $getRequest = $request;
+                $retryWithGet = static fn () => $handler($getRequest, $options);
+
+                return $handler($request->withMethod('HEAD'), $options)->then(
+                    static function (ResponseInterface $response) use ($retryWithGet) {
+                        if (in_array($response->getStatusCode(), [403, 405, 501], true)) {
+                            return $retryWithGet();
+                        }
+                        return $response;
+                    },
+                    static function ($reason) use ($retryWithGet) {
+                        if ($reason instanceof RequestException) {
+                            $response = $reason->getResponse();
+                            if ($response instanceof ResponseInterface && in_array($response->getStatusCode(), [403, 405, 501], true)) {
+                                return $retryWithGet();
+                            }
+                        }
+                        return Create::rejectionFor($reason);
+                    }
+                );
+            };
+        };
+    }
+
+    /**
+     * Throttle requests to external hosts to at most N per second so a host that appears on many
+     * pages is not hammered. The site's own host is governed by the global concurrency instead.
+     * Uses Guzzle's non-blocking delay option so the concurrent request pool keeps flowing.
+     */
+    private function createPerHostRateLimitMiddleware(string $baseHost, float $requestsPerSecond): callable
+    {
+        $minIntervalMs = 1000.0 / $requestsPerSecond;
+        $hostNextAvailableMs = [];
+
+        return static function (callable $handler) use ($baseHost, $minIntervalMs, &$hostNextAvailableMs): callable {
+            return static function (RequestInterface $request, array $options) use ($handler, $baseHost, $minIntervalMs, &$hostNextAvailableMs) {
+                $host = strtolower($request->getUri()->getHost());
+                if ($host === '' || $host === $baseHost) {
+                    return $handler($request, $options);
+                }
+
+                $nowMs = microtime(true) * 1000;
+                $earliestMs = max($nowMs, $hostNextAvailableMs[$host] ?? 0.0);
+                $hostNextAvailableMs[$host] = $earliestMs + $minIntervalMs;
+
+                $delayMs = $earliestMs - $nowMs;
+                if ($delayMs > 0) {
+                    $options[RequestOptions::DELAY] = ($options[RequestOptions::DELAY] ?? 0) + $delayMs;
+                }
+
+                return $handler($request, $options);
+            };
+        };
+    }
+
+    /**
+     * Skip external links that were confirmed healthy on a recent run, and record freshly confirmed
+     * healthy external links for next time. Internal pages are always fetched so they stay current.
+     */
+    private function createResultCacheMiddleware(string $baseHost): callable
+    {
+        $cache = $this->linkTargetCache;
+
+        return static function (callable $handler) use ($cache, $baseHost): callable {
+            return static function (RequestInterface $request, array $options) use ($handler, $cache, $baseHost) {
+                $url = (string)$request->getUri();
+                $host = strtolower($request->getUri()->getHost());
+                $isExternal = $host !== '' && $host !== $baseHost;
+
+                if ($isExternal && $cache->isFresh($url)) {
+                    return Create::promiseFor(new Response(200));
+                }
+
+                return $handler($request, $options)->then(
+                    static function (ResponseInterface $response) use ($cache, $isExternal, $url) {
+                        $statusCode = $response->getStatusCode();
+                        if ($isExternal && $statusCode >= 200 && $statusCode < 300) {
+                            $cache->remember($url);
+                        }
+                        return $response;
+                    }
+                );
+            };
+        };
     }
 }

@@ -104,6 +104,40 @@ NEOSidekick:
       userAgent: 'NEOSidekickLinkChecker/1.0 (+https://neosidekick.com/)'
 ```
 
+### Performance & scale
+
+External link checks are the slow part of a crawl. Several measures keep crawls fast and polite:
+
+ - **HEAD-first**: external links only need their status, so they are checked with a cheap `HEAD`
+   request (with an automatic `GET` fallback for servers that reject `HEAD`). Internal pages still
+   use `GET` because their body is needed to discover links.
+ - **Byte cap**: external requests carry a `Range` header and the body read is capped, so a link to
+   a huge PDF or video is never fully downloaded.
+ - **Per-host rate limiting**: external hosts are limited to a few requests per second; the site's
+   own host is governed by `concurrency`. Connections are kept alive and reused.
+ - **In-run deduplication**: each unique URL is checked once per crawl, even if it appears on many
+   pages (e.g. navigation/footer links).
+ - **Between-run cache** (opt-in): external links confirmed healthy can be skipped on the next run
+   until the cached result expires.
+ - **Incremental internal crawl** (opt-in, `./flow checklinks:crawl --only-changed`): only re-checks
+   content nodes modified since the last run. Note this can miss links broken by changes on the
+   *target* side, so it is best combined with periodic full crawls.
+
+```yaml
+NEOSidekick:
+  LinkChecker:
+    performance:
+      maximumResponseSize: 2097152     # max body bytes read per page
+      headFirst: true
+      externalRangeBytes: 65536        # Range: bytes=0-N for external requests (0 = off)
+      perHostRequestsPerSecond: 4      # 0 = no per-host limit
+      betweenRunCache:
+        enabled: false
+        okLifetime: 604800             # seconds a healthy external link may be skipped
+    incremental:
+      enabled: false                   # or pass --only-changed per run
+```
+
 ### Email reports
 
 The link checker can also send an email if it finds broken links.

@@ -76,6 +76,18 @@ class CheckLinksCommandController extends CommandController
     protected $resultItemRepository;
 
     /**
+     * @Flow\Inject
+     * @var \NEOSidekick\LinkChecker\Infrastructure\IncrementalCrawlTracker
+     */
+    protected $incrementalCrawlTracker;
+
+    /**
+     * @Flow\InjectConfiguration(path="incremental.enabled")
+     * @var bool
+     */
+    protected $incrementalEnabled = false;
+
+    /**
      * @Flow\InjectConfiguration(path="notifications")
      * @var array
      */
@@ -161,13 +173,14 @@ class CheckLinksCommandController extends CommandController
      * Crawl for invalid node links and external links
      *
      * @param bool $withNotification sends email notification after scan
+     * @param bool $onlyChanged only check content nodes modified since the last incremental run
      */
-    public function crawlCommand(bool $withNotification = false): void
+    public function crawlCommand(bool $withNotification = false, bool $onlyChanged = false): void
     {
         $this->legacyHackPrettyUrls();
         $domainsToCrawl = $this->domainService->findAllSitesPrimaryDomain();
         $this->ensureDomainsNotEmpty($domainsToCrawl);
-        $this->crawlNodesCommandImplementation($domainsToCrawl);
+        $this->crawlNodesCommandImplementation($domainsToCrawl, $onlyChanged);
         $this->crawlExternalCommandImplementation($domainsToCrawl);
         if ($withNotification) {
             $this->sendNotificationIfNecessary($this->countBrokenNonIgnored(), $this->createLinkCheckerDashboardUriFromStuff($domainsToCrawl));
@@ -180,13 +193,14 @@ class CheckLinksCommandController extends CommandController
      * This command crawls an url for invalid internal and external links
      *
      * @param bool $withNotification sends email notification after scan
+     * @param bool $onlyChanged only check content nodes modified since the last incremental run
      */
-    public function crawlNodesCommand(bool $withNotification = false): void
+    public function crawlNodesCommand(bool $withNotification = false, bool $onlyChanged = false): void
     {
         $this->legacyHackPrettyUrls();
         $domainsToCrawl = $this->domainService->findAllSitesPrimaryDomain();
         $this->ensureDomainsNotEmpty($domainsToCrawl);
-        $this->crawlNodesCommandImplementation($domainsToCrawl);
+        $this->crawlNodesCommandImplementation($domainsToCrawl, $onlyChanged);
         if ($withNotification) {
             $this->sendNotificationIfNecessary($this->countBrokenNonIgnored(), $this->createLinkCheckerDashboardUriFromStuff($domainsToCrawl));
         }
@@ -210,8 +224,19 @@ class CheckLinksCommandController extends CommandController
         }
     }
 
-    private function crawlNodesCommandImplementation(array $domainsToCrawl): void
+    private function crawlNodesCommandImplementation(array $domainsToCrawl, bool $onlyChanged = false): void
     {
+        $incremental = $onlyChanged || $this->incrementalEnabled;
+        $changedSince = $incremental ? $this->incrementalCrawlTracker->getLastRun() : null;
+        // Anchor the next incremental window to the start of this run so concurrent edits are not missed.
+        $crawlStartedAt = new \DateTimeImmutable();
+
+        if ($incremental) {
+            $this->output->outputLine($changedSince === null
+                ? 'Incremental mode: no previous run found, performing a full crawl.'
+                : sprintf('Incremental mode: only checking nodes changed since %s.', $changedSince->format('Y-m-d H:i:s')));
+        }
+
         /** @var callable|null $restoreBaseUriProviderSingleton */
         $restoreBaseUriProviderSingleton = null;
         foreach ($domainsToCrawl as $domainToCrawl) {
@@ -224,7 +249,7 @@ class CheckLinksCommandController extends CommandController
                 'currentDomain' => $domainToCrawl,
             ]);
 
-            $messages = $this->contentNodeCrawler->crawl($subgraph, $domainToCrawl);
+            $messages = $this->contentNodeCrawler->crawl($subgraph, $domainToCrawl, $changedSince);
 
             foreach ($messages as $message) {
                 $this->output->outputFormatted('<error>' . $message . '</error>');
@@ -240,6 +265,10 @@ class CheckLinksCommandController extends CommandController
         if ($restoreBaseUriProviderSingleton) {
             $restoreBaseUriProviderSingleton();
         }
+
+        if ($incremental) {
+            $this->incrementalCrawlTracker->setLastRun($crawlStartedAt);
+        }
     }
 
     private function crawlExternalCommandImplementation(array $domainsToCrawl): void
@@ -248,8 +277,8 @@ class CheckLinksCommandController extends CommandController
 
         foreach ($domainsToCrawl as $domainToCrawl) {
             $crawlObserver = new LogAndPersistResultCrawlObserver();
-            $crawler = $this->webCrawlerFactory->createCrawler($crawlProfile, $crawlObserver);
             $url = $this->uriFactory->createFromDomain($domainToCrawl);
+            $crawler = $this->webCrawlerFactory->createCrawler($crawlProfile, $crawlObserver, $url->getHost());
 
             try {
                 $this->outputLine("Start scanning $url");

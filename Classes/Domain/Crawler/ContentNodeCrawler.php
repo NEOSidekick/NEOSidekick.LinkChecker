@@ -57,24 +57,24 @@ class ContentNodeCrawler
      */
     protected $nodeDataRepository;
 
-    public function crawl(ContentContext $subgraph, Domain $domain): array
+    public function crawl(ContentContext $subgraph, Domain $domain, ?\DateTimeInterface $changedSince = null): array
     {
         $messages = [];
 
         $currentSiteNode = $subgraph->getCurrentSiteNode();
-        $this->crawlNode($currentSiteNode, $subgraph, $domain, $messages);
-        $this->crawlChildNodesRecursively($currentSiteNode, $subgraph, $domain, $messages);
+        $this->crawlNode($currentSiteNode, $subgraph, $domain, $messages, $changedSince);
+        $this->crawlChildNodesRecursively($currentSiteNode, $subgraph, $domain, $messages, $changedSince);
 
         return $messages;
     }
 
-    protected function crawlChildNodesRecursively(NodeInterface|TraversableNodeInterface $rootNode, ContentContext $subgraph, Domain $domain, array &$messages): void
+    protected function crawlChildNodesRecursively(NodeInterface|TraversableNodeInterface $rootNode, ContentContext $subgraph, Domain $domain, array &$messages, ?\DateTimeInterface $changedSince = null): void
     {
         $childNodes = $rootNode->findChildNodes();
 
         foreach ($childNodes as $node) {
-            $this->crawlNode($node, $subgraph, $domain, $messages);
-            $this->crawlChildNodesRecursively($node, $subgraph, $domain, $messages);
+            $this->crawlNode($node, $subgraph, $domain, $messages, $changedSince);
+            $this->crawlChildNodesRecursively($node, $subgraph, $domain, $messages, $changedSince);
         }
 
         // Free memory
@@ -231,8 +231,16 @@ class ContentNodeCrawler
         return $newSubgraph;
     }
 
-    protected function crawlNode(NodeInterface|TraversableNodeInterface $node, ContentContext $subgraph, Domain $domain, array &$messages): void
+    protected function crawlNode(NodeInterface|TraversableNodeInterface $node, ContentContext $subgraph, Domain $domain, array &$messages, ?\DateTimeInterface $changedSince = null): void
     {
+        // In incremental mode, skip nodes that have not been modified since the last crawl.
+        if ($changedSince !== null) {
+            $lastModified = $node->getNodeData()->getLastModificationDateTime();
+            if ($lastModified instanceof \DateTimeInterface && $lastModified <= $changedSince) {
+                return;
+            }
+        }
+
         $unresolvedUris = [];
         $invalidPhoneNumbers = [];
 

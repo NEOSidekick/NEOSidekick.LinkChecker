@@ -29,6 +29,29 @@ NEOSidekick:
         - 'play.google.com'
         - 'drive.google.com'
 
+    # Performance & scale: avoid downloading bodies you don't need and avoid re-checking links you
+    # already verified.
+    performance:
+      # Cap the number of body bytes read per crawled page (bounds memory on large documents).
+      maximumResponseSize: 2097152
+      # Use HEAD instead of GET for external links (only their status is needed), with an automatic
+      # GET fallback for servers that reject HEAD. Internal pages always use GET for link discovery.
+      headFirst: true
+      # Byte range cap for external requests so a link to a huge PDF/video is not fully downloaded.
+      externalRangeBytes: 65536
+      # Rate limit per external host (requests/second); 0 disables it. The site's own host is
+      # governed by `concurrency` above instead.
+      perHostRequestsPerSecond: 4
+      # Skip re-requesting external links that were confirmed healthy on a recent run.
+      betweenRunCache:
+        enabled: false
+        okLifetime: 604800
+
+    # Only re-check content nodes that changed since the last incremental run. Opt-in via the
+    # `--only-changed` flag; note it can miss links broken by changes on the *target* side.
+    incremental:
+      enabled: false
+
     clientOptions:
       retryAttempts: 2
       cookies: true

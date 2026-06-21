@@ -1,0 +1,10 @@
+# Caches the result of external link checks between crawl runs so that links confirmed OK are not
+# re-requested on every run (politeness + performance). Entries expire via their per-entry lifetime.
+NEOSidekick_LinkChecker_LinkTarget:
+  frontend: Neos\Cache\Frontend\VariableFrontend
+  backend: Neos\Cache\Backend\FileBackend
+
+# Stores the timestamp of the last completed incremental node crawl per site/dimension.
+NEOSidekick_LinkChecker_CrawlState:
+  frontend: Neos\Cache\Frontend\VariableFrontend
+  backend: Neos\Cache\Backend\FileBackend
