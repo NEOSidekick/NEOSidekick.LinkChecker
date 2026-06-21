@@ -7,7 +7,7 @@ prototype(NEOSidekick.LinkChecker:Component.Links.FilterLink) < prototype(Neos.F
         <a href={props.option.uri} class={props.active ? 'link-checker-filter__button link-checker-filter__button--active link-checker-filter__button--' + props.variant : 'link-checker-filter__button link-checker-filter__button--' + props.variant}>
             <span class="link-checker-filter__text">
                 <Neos.Fusion:Fragment @if={props.option.translationId}>
-                    {I18n.translate('NEOSidekick.LinkChecker:Modules:' + props.option.translationId)}
+                    {I18n.translate('NEOSidekick.LinkChecker:Modules:' + props.option.translationId) || props.option.label}
                 </Neos.Fusion:Fragment>
                 <Neos.Fusion:Fragment @if={!props.option.translationId}>
                     {props.option.label}
@@ -182,7 +182,7 @@ prototype(NEOSidekick.LinkChecker:Component.Links.Group) < prototype(Neos.Fusion
 
                 <div class="link-checker-group__aside" onclick="event.stopPropagation()">
                     <span @if={props.group.showStatusInHeader} class={'link-checker-status link-checker-status--' + props.group.severity}>
-                        {I18n.translate('NEOSidekick.LinkChecker:Modules:' + props.group.statusTranslationId)}
+                        {I18n.translate('NEOSidekick.LinkChecker:Modules:' + props.group.statusTranslationId) || props.group.statusCode}
                     </span>
                     <div class="link-checker-group__bulk">
                         <Neos.Fusion.Form:Form form.target={props.resolveGroupUri} attributes.class="neos-inline">
@@ -253,7 +253,7 @@ prototype(NEOSidekick.LinkChecker:Component.Links.SourceRow) < prototype(Neos.Fu
                 </div>
 
                 <span @if={!props.group.showStatusInHeader && props.child.link.statusTranslationId} class={'link-checker-status link-checker-status--small link-checker-status--' + props.child.link.severity}>
-                    {I18n.translate('NEOSidekick.LinkChecker:Modules:' + props.child.link.statusTranslationId)}
+                    {I18n.translate('NEOSidekick.LinkChecker:Modules:' + props.child.link.statusTranslationId) || props.child.link.statusCode}
                 </span>
             </div>
 
@@ -359,7 +359,7 @@ prototype(NEOSidekick.LinkChecker:Component.Links.List.Link) < prototype(Neos.Fu
                     <span class="link-checker-table__text" title={props.link.targetFallbackLabel} @if={!props.link.targetUri}>{props.link.targetFallbackLabel}</span>
                 </div>
             </td>
-            <td class="link-checker-table__status" data-label={I18n.translate('NEOSidekick.LinkChecker:Modules:error')}>{I18n.translate('NEOSidekick.LinkChecker:Modules:error.' + props.link.statusCode)}</td>
+            <td class="link-checker-table__status" data-label={I18n.translate('NEOSidekick.LinkChecker:Modules:error')}>{I18n.translate('NEOSidekick.LinkChecker:Modules:error.' + props.link.statusCode) || props.link.statusCode}</td>
             <td class="link-checker-table__date" data-label={I18n.translate('NEOSidekick.LinkChecker:Modules:foundAt')}>{Date.format(props.link.checkedAt, 'd.m.Y H:i')}</td>
             <td class="neos-action link-checker-table__actions" data-label={I18n.translate('NEOSidekick.LinkChecker:Modules:actions')}>
                 <div class="link-checker-table__action-list">

@@ -89,6 +89,15 @@
             <trans-unit id="error.303">
                 <source>Siehe anderswo (303)</source>
             </trans-unit>
+            <trans-unit id="error.304">
+                <source>Nicht geändert (304)</source>
+            </trans-unit>
+            <trans-unit id="error.305">
+                <source>Proxy verwenden (305)</source>
+            </trans-unit>
+            <trans-unit id="error.306">
+                <source>Proxy wechseln (306)</source>
+            </trans-unit>
             <trans-unit id="error.307">
                 <source>Zeitweise Umleitung (307)</source>
             </trans-unit>
@@ -101,6 +110,9 @@
             <trans-unit id="error.401">
                 <source>Unautorisiert (401)</source>
             </trans-unit>
+            <trans-unit id="error.402">
+                <source>Zahlung erforderlich (402)</source>
+            </trans-unit>
             <trans-unit id="error.403">
                 <source>Verboten (403)</source>
             </trans-unit>
@@ -110,14 +122,74 @@
             <trans-unit id="error.405">
                 <source>Methode nicht erlaubt (405)</source>
             </trans-unit>
+            <trans-unit id="error.406">
+                <source>Nicht akzeptabel (406)</source>
+            </trans-unit>
+            <trans-unit id="error.407">
+                <source>Proxy-Authentifizierung erforderlich (407)</source>
+            </trans-unit>
             <trans-unit id="error.408">
                 <source>Anfrage-Zeitüberschreitung (408)</source>
+            </trans-unit>
+            <trans-unit id="error.409">
+                <source>Konflikt (409)</source>
             </trans-unit>
             <trans-unit id="error.410">
                 <source>Nicht mehr vorhanden (410)</source>
             </trans-unit>
+            <trans-unit id="error.411">
+                <source>Länge erforderlich (411)</source>
+            </trans-unit>
+            <trans-unit id="error.412">
+                <source>Vorbedingung fehlgeschlagen (412)</source>
+            </trans-unit>
+            <trans-unit id="error.413">
+                <source>Anfrageinhalt zu groß (413)</source>
+            </trans-unit>
+            <trans-unit id="error.414">
+                <source>URI zu lang (414)</source>
+            </trans-unit>
+            <trans-unit id="error.415">
+                <source>Nicht unterstützter Medientyp (415)</source>
+            </trans-unit>
+            <trans-unit id="error.416">
+                <source>Angeforderter Bereich nicht erfüllbar (416)</source>
+            </trans-unit>
+            <trans-unit id="error.417">
+                <source>Erwartung fehlgeschlagen (417)</source>
+            </trans-unit>
+            <trans-unit id="error.418">
+                <source>Ich bin eine Teekanne (418)</source>
+            </trans-unit>
+            <trans-unit id="error.421">
+                <source>Fehlgeleitete Anfrage (421)</source>
+            </trans-unit>
+            <trans-unit id="error.422">
+                <source>Nicht verarbeitbarer Inhalt (422)</source>
+            </trans-unit>
+            <trans-unit id="error.423">
+                <source>Gesperrt (423)</source>
+            </trans-unit>
+            <trans-unit id="error.424">
+                <source>Fehlgeschlagene Abhängigkeit (424)</source>
+            </trans-unit>
+            <trans-unit id="error.425">
+                <source>Zu früh (425)</source>
+            </trans-unit>
+            <trans-unit id="error.426">
+                <source>Upgrade erforderlich (426)</source>
+            </trans-unit>
+            <trans-unit id="error.428">
+                <source>Vorbedingung erforderlich (428)</source>
+            </trans-unit>
             <trans-unit id="error.429">
                 <source>Zu viele Anfragen (429)</source>
+            </trans-unit>
+            <trans-unit id="error.431">
+                <source>Anfrage-Header-Felder zu groß (431)</source>
+            </trans-unit>
+            <trans-unit id="error.451">
+                <source>Aus rechtlichen Gründen nicht verfügbar (451)</source>
             </trans-unit>
             <trans-unit id="error.490">
                 <source>Telefonnummern sollten im internationalen Format angegeben werden (490)</source>
@@ -125,11 +197,59 @@
             <trans-unit id="error.500">
                 <source>Interner Server-Fehler (500)</source>
             </trans-unit>
+            <trans-unit id="error.501">
+                <source>Nicht implementiert (501)</source>
+            </trans-unit>
+            <trans-unit id="error.502">
+                <source>Fehlerhaftes Gateway (502)</source>
+            </trans-unit>
             <trans-unit id="error.503">
                 <source>Dienst nicht verfügbar (503)</source>
             </trans-unit>
+            <trans-unit id="error.504">
+                <source>Gateway-Zeitüberschreitung (504)</source>
+            </trans-unit>
+            <trans-unit id="error.505">
+                <source>HTTP-Version nicht unterstützt (505)</source>
+            </trans-unit>
+            <trans-unit id="error.506">
+                <source>Variante verhandelt ebenfalls (506)</source>
+            </trans-unit>
+            <trans-unit id="error.507">
+                <source>Unzureichender Speicherplatz (507)</source>
+            </trans-unit>
+            <trans-unit id="error.508">
+                <source>Schleife erkannt (508)</source>
+            </trans-unit>
             <trans-unit id="error.509">
                 <source>Datenvolumen überschritten (509)</source>
+            </trans-unit>
+            <trans-unit id="error.510">
+                <source>Nicht erweitert (510)</source>
+            </trans-unit>
+            <trans-unit id="error.511">
+                <source>Netzwerkauthentifizierung erforderlich (511)</source>
+            </trans-unit>
+            <trans-unit id="error.520">
+                <source>Unbekannter Serverfehler (520)</source>
+            </trans-unit>
+            <trans-unit id="error.521">
+                <source>Webserver nicht erreichbar (521)</source>
+            </trans-unit>
+            <trans-unit id="error.522">
+                <source>Verbindung zeitüberschritten (522)</source>
+            </trans-unit>
+            <trans-unit id="error.523">
+                <source>Ursprungsserver nicht erreichbar (523)</source>
+            </trans-unit>
+            <trans-unit id="error.524">
+                <source>Zeitüberschreitung beim Ursprungsserver (524)</source>
+            </trans-unit>
+            <trans-unit id="error.525">
+                <source>SSL-Handshake fehlgeschlagen (525)</source>
+            </trans-unit>
+            <trans-unit id="error.526">
+                <source>Ungültiges SSL-Zertifikat (526)</source>
             </trans-unit>
             <trans-unit id="foundAt">
                 <source>Gefunden am</source>

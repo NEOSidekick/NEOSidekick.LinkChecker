@@ -147,6 +147,18 @@ class ResultItemGroupingServiceTest extends UnitTestCase
     }
 
     /** @test */
+    public function statusOptionsKeepNumericLabelForTranslationFallback(): void
+    {
+        $links = [
+            $this->createLink('www.neos.eu', '/sites/www/a', 'https://example.com/unexpected', 599),
+        ];
+
+        $list = $this->service->group($links, ResultItemGroupingService::MODE_TARGET, 'all', 'all', 'all', ResultItemGroupingService::IMPACT_ALL);
+
+        self::assertSame('599', $this->labelForOption($list->getStatusOptions(), '599'));
+    }
+
+    /** @test */
     public function impactOptionsUseMutuallyExclusiveAffectedSourceBuckets(): void
     {
         $links = [
@@ -204,6 +216,17 @@ class ResultItemGroupingServiceTest extends UnitTestCase
         foreach ($options as $option) {
             if ($option->getIdentifier() === $identifier) {
                 return $option->getCount();
+            }
+        }
+
+        self::fail(sprintf('Missing option "%s"', $identifier));
+    }
+
+    private function labelForOption(array $options, string $identifier): string
+    {
+        foreach ($options as $option) {
+            if ($option->getIdentifier() === $identifier) {
+                return $option->getLabel();
             }
         }
 
