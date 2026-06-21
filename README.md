@@ -268,3 +268,17 @@ The development of this plugin was kindly sponsored by [Code Q](https://codeq.at
 The package is based on the `Unikka/LinkChecker` package, which does a great job at finding all broken external links. This package extends the features a lot, offers a new UI and introduces new dependencies.
 
 We will gladly accept contributions. Please send us pull requests.
+
+## Tests
+
+Run the unit tests from the project root inside DDEV:
+
+```bash
+ddev exec ./bin/phpunit --configuration UnitTests.xml DistributionPackages/NEOSidekick.LinkChecker/Tests/Unit
+```
+
+Alternatively, run the package-local PHPUnit configuration:
+
+```bash
+ddev exec ./bin/phpunit --configuration DistributionPackages/NEOSidekick.LinkChecker/Tests/UnitTests.xml
+```
