@@ -167,11 +167,10 @@ class CheckLinksCommandController extends CommandController
         $this->legacyHackPrettyUrls();
         $domainsToCrawl = $this->domainService->findAllSitesPrimaryDomain();
         $this->ensureDomainsNotEmpty($domainsToCrawl);
-        $errorCount = 0;
-        $this->crawlNodesCommandImplementation($domainsToCrawl, $errorCount);
-        $this->crawlExternalCommandImplementation($domainsToCrawl, $errorCount);
+        $this->crawlNodesCommandImplementation($domainsToCrawl);
+        $this->crawlExternalCommandImplementation($domainsToCrawl);
         if ($withNotification) {
-            $this->sendNotificationIfNecessary($errorCount, $this->createLinkCheckerDashboardUriFromStuff($domainsToCrawl));
+            $this->sendNotificationIfNecessary($this->countBrokenNonIgnored(), $this->createLinkCheckerDashboardUriFromStuff($domainsToCrawl));
         }
     }
 
@@ -187,10 +186,9 @@ class CheckLinksCommandController extends CommandController
         $this->legacyHackPrettyUrls();
         $domainsToCrawl = $this->domainService->findAllSitesPrimaryDomain();
         $this->ensureDomainsNotEmpty($domainsToCrawl);
-        $errorCount = 0;
-        $this->crawlNodesCommandImplementation($domainsToCrawl, $errorCount);
+        $this->crawlNodesCommandImplementation($domainsToCrawl);
         if ($withNotification) {
-            $this->sendNotificationIfNecessary($errorCount, $this->createLinkCheckerDashboardUriFromStuff($domainsToCrawl));
+            $this->sendNotificationIfNecessary($this->countBrokenNonIgnored(), $this->createLinkCheckerDashboardUriFromStuff($domainsToCrawl));
         }
     }
 
@@ -206,14 +204,13 @@ class CheckLinksCommandController extends CommandController
         $this->legacyHackPrettyUrls();
         $domainsToCrawl = $this->domainService->findAllSitesPrimaryDomain();
         $this->ensureDomainsNotEmpty($domainsToCrawl);
-        $errorCount = 0;
-        $this->crawlExternalCommandImplementation($domainsToCrawl, $errorCount);
+        $this->crawlExternalCommandImplementation($domainsToCrawl);
         if ($withNotification) {
-            $this->sendNotificationIfNecessary($errorCount, $this->createLinkCheckerDashboardUriFromStuff($domainsToCrawl));
+            $this->sendNotificationIfNecessary($this->countBrokenNonIgnored(), $this->createLinkCheckerDashboardUriFromStuff($domainsToCrawl));
         }
     }
 
-    private function crawlNodesCommandImplementation(array $domainsToCrawl, int &$errorCount): void
+    private function crawlNodesCommandImplementation(array $domainsToCrawl): void
     {
         /** @var callable|null $restoreBaseUriProviderSingleton */
         $restoreBaseUriProviderSingleton = null;
@@ -228,7 +225,6 @@ class CheckLinksCommandController extends CommandController
             ]);
 
             $messages = $this->contentNodeCrawler->crawl($subgraph, $domainToCrawl);
-            $errorCount += \count($messages);
 
             foreach ($messages as $message) {
                 $this->output->outputFormatted('<error>' . $message . '</error>');
@@ -246,7 +242,7 @@ class CheckLinksCommandController extends CommandController
         }
     }
 
-    private function crawlExternalCommandImplementation(array $domainsToCrawl, int &$errorCount): void
+    private function crawlExternalCommandImplementation(array $domainsToCrawl): void
     {
         $crawlProfile = new CrawlNonExcludedUrls();
 
@@ -261,7 +257,6 @@ class CheckLinksCommandController extends CommandController
 
                 try {
                     $crawler->startCrawling($url);
-                    $errorCount += $crawlObserver->getErrorCount();
                 } catch (OriginUrlException $originUrlException) {
                     $this->outputFormatted("<error>{$originUrlException->getMessage()}</error>");
                     $this->outputFormatted("<error>The configured site domain $url could not be reached, please check if the URL is correct.</error>");
@@ -312,6 +307,22 @@ class CheckLinksCommandController extends CommandController
             'Backend\Module',
             'Neos.Neos'
         ));
+    }
+
+    /**
+     * Count broken (non-ignored) findings. Warnings such as auth walls or rate limits are excluded
+     * so that notifications only fire for links that genuinely need fixing.
+     */
+    private function countBrokenNonIgnored(): int
+    {
+        $count = 0;
+        foreach ($this->resultItemRepository->findAll() as $resultItem) {
+            if ($resultItem->isBroken()) {
+                $count++;
+            }
+        }
+
+        return $count;
     }
 
     /**

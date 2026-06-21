@@ -8,6 +8,7 @@ use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\Uri;
 use NEOSidekick\LinkChecker\Domain\Model\ResultItem;
 use NEOSidekick\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
+use NEOSidekick\LinkChecker\Infrastructure\LinkStatusClassifier;
 use NEOSidekick\LinkChecker\Infrastructure\LogAndPersistResultCrawlObserver;
 use Neos\Flow\Cli\ConsoleOutput;
 use Neos\Flow\Persistence\QueryResultInterface;
@@ -70,6 +71,35 @@ class LogAndPersistResultCrawlObserverTest extends UnitTestCase
         self::assertSame(1, $observer->getErrorCount());
     }
 
+    /** @test */
+    public function forbiddenResponseIsPersistedAsWarningNotBroken(): void
+    {
+        $repository = new InMemoryResultItemRepository();
+        $observer = $this->createObserver($repository, []);
+
+        $observer->crawled(new Uri('https://target.example/members-only'), new Response(403), new Uri('https://example.com/source'));
+        $observer->finishedCrawling();
+
+        self::assertCount(1, $repository->addedResultItems);
+        self::assertSame(403, $repository->addedResultItems[0]->getStatusCode());
+        self::assertSame(ResultItem::STATE_WARNING, $repository->addedResultItems[0]->getState());
+        self::assertFalse($repository->addedResultItems[0]->isBroken());
+    }
+
+    /** @test */
+    public function notFoundResponseIsPersistedAsBroken(): void
+    {
+        $repository = new InMemoryResultItemRepository();
+        $observer = $this->createObserver($repository, []);
+
+        $observer->crawled(new Uri('https://target.example/missing'), new Response(404), new Uri('https://example.com/source'));
+        $observer->finishedCrawling();
+
+        self::assertCount(1, $repository->addedResultItems);
+        self::assertSame(ResultItem::STATE_BROKEN, $repository->addedResultItems[0]->getState());
+        self::assertTrue($repository->addedResultItems[0]->isBroken());
+    }
+
     private function createObserver(
         InMemoryResultItemRepository $repository,
         array $revalidatedStatusCodes
@@ -80,7 +110,14 @@ class LogAndPersistResultCrawlObserverTest extends UnitTestCase
             ->onlyMethods(['outputLine'])
             ->getMock();
 
+        $classifier = new LinkStatusClassifier();
+        $this->inject($classifier, 'warningStatusCodes', [401, 403, 429]);
+        $this->inject($classifier, 'detectCloudflareChallenge', true);
+        $this->inject($classifier, 'knownBlockerDomains', []);
+        $this->inject($classifier, 'ignoreRules', []);
+
         $this->inject($observer, 'resultItemRepository', $repository);
+        $this->inject($observer, 'linkStatusClassifier', $classifier);
         $this->inject($observer, 'output', $output);
         $this->inject($observer, 'excludeStatusCodes', [0, 301, 302, 303, 307, 308]);
 

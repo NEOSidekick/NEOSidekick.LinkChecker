@@ -166,7 +166,8 @@ class ContentNodeCrawler
         Domain $domain,
         NodeInterface|TraversableNodeInterface $node,
         string $uri,
-        int $statusCode
+        int $statusCode,
+        string $state = ResultItem::STATE_BROKEN
     ): void {
         $documentNode = $this->findClosestDocumentNode($node);
 
@@ -175,6 +176,7 @@ class ContentNodeCrawler
         $resultItem->setSource((string)$documentNode->getNodeAggregateIdentifier());
         $resultItem->setSourcePath((string)$documentNode->findNodePath());
         $resultItem->setTarget($uri);
+        $resultItem->setState($state);
 
         if (str_starts_with($uri, 'node://')) {
             $subgraphWithHiddenNodes = $this->subgraphWithConfiguration($subgraph, [
@@ -251,7 +253,8 @@ class ContentNodeCrawler
             $messages[] = 'Invalid format: ' . $phoneNumber;
 
             /* @see https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml - 490 is unassigned, and so we can use it */
-            $this->createResultItem($subgraph, $domain, $node, $phoneNumber, 490);
+            // A malformed phone number is a content hint, not a dead link, so it is a warning.
+            $this->createResultItem($subgraph, $domain, $node, $phoneNumber, 490, ResultItem::STATE_WARNING);
         }
     }
 }

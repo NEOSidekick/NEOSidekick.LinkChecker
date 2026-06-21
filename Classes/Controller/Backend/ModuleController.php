@@ -288,7 +288,7 @@ class ModuleController extends AbstractModuleController
             'secondaryLabel' => $group->getSecondaryLabel(),
             'statusCode' => $statusCode,
             'statusTranslationId' => $this->statusBadgeTranslationId($statusCode),
-            'severity' => $this->statusSeverity($statusCode),
+            'severity' => $this->groupSeverity($children, $statusCode),
             'targetType' => $group->getTargetType(),
             'mode' => $mode,
             'headerKind' => $headerKind,
@@ -342,6 +342,32 @@ class ModuleController extends AbstractModuleController
         return 'neutral';
     }
 
+    /**
+     * Severity follows the persisted classification so that auth walls, bot blocks, rate limits and
+     * Cloudflare challenges are presented as warnings rather than hard errors.
+     */
+    private function severityForState(string $state): string
+    {
+        return $state === ResultItem::STATE_WARNING ? 'warning' : 'error';
+    }
+
+    /**
+     * @param array<ResultItemGroupChildView> $children
+     */
+    private function groupSeverity(array $children, ?int $statusCode): string
+    {
+        if ($statusCode === null) {
+            return $this->statusSeverity($statusCode);
+        }
+
+        $firstChild = $children[0] ?? null;
+        if ($firstChild instanceof ResultItemGroupChildView) {
+            return $this->severityForState($firstChild->getLink()->getState());
+        }
+
+        return $this->statusSeverity($statusCode);
+    }
+
     private function serializeGroupChild(ResultItemGroupChildView $child): array
     {
         return [
@@ -370,7 +396,8 @@ class ModuleController extends AbstractModuleController
             'targetFallbackLabel' => $link->getTargetFallbackLabel(),
             'statusCode' => $statusCode,
             'statusTranslationId' => $this->statusBadgeTranslationId($statusCode),
-            'severity' => $this->statusSeverity($statusCode),
+            'severity' => $this->severityForState($link->getState()),
+            'state' => $link->getState(),
             'checkedAt' => $link->getCheckedAt(),
         ];
     }

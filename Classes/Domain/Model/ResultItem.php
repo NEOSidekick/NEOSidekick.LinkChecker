@@ -14,6 +14,22 @@ use Doctrine\ORM\Mapping as ORM;
 class ResultItem implements \JsonSerializable
 {
     /**
+     * A genuinely dead link (4xx/5xx, missing node/asset) that should be fixed.
+     */
+    public const STATE_BROKEN = 'broken';
+
+    /**
+     * An unverifiable result (auth wall, bot block, rate limit, redirect, invalid phone format)
+     * that is surfaced for review but must not be treated as a hard error.
+     */
+    public const STATE_WARNING = 'warning';
+
+    /**
+     * A healthy link. Used only as a classifier return value; healthy links are never persisted.
+     */
+    public const STATE_OK = 'ok';
+
+    /**
      * @var string|null
      * @ORM\Column(length=64, nullable=false, unique=true)
      */
@@ -58,6 +74,14 @@ class ResultItem implements \JsonSerializable
      * @var integer
      */
     protected int $statusCode;
+
+    /**
+     * Classification of the finding (broken vs. warning), see the STATE_* constants.
+     *
+     * @var string|null
+     * @ORM\Column(length=20, nullable=true)
+     */
+    protected ?string $state = self::STATE_BROKEN;
 
     /**
      * @var boolean
@@ -195,6 +219,24 @@ class ResultItem implements \JsonSerializable
         $this->statusCode = $statusCode;
     }
 
+    /**
+     * Findings persisted before the classification feature default to "broken".
+     */
+    public function getState(): string
+    {
+        return $this->state ?? self::STATE_BROKEN;
+    }
+
+    public function setState(string $state): void
+    {
+        $this->state = $state;
+    }
+
+    public function isBroken(): bool
+    {
+        return $this->getState() === self::STATE_BROKEN;
+    }
+
     public function getIgnore(): bool
     {
         return $this->ignore;
@@ -251,6 +293,11 @@ class ResultItem implements \JsonSerializable
             $this->setIgnore(true);
         }
 
+        // A broken finding outranks a warning when the same issue is reported twice.
+        if ($incoming->isBroken() && !$this->isBroken()) {
+            $this->setState(self::STATE_BROKEN);
+        }
+
         $this->refreshFingerprint();
     }
 
@@ -266,6 +313,7 @@ class ResultItem implements \JsonSerializable
             'targetPath' => $this->getTargetPath(),
             'targetPageTitle' => $this->getTargetPageTitle(),
             'statusCode' => $this->getStatusCode(),
+            'state' => $this->getState(),
             'ignore' => $this->getIgnore(),
             'createdAt' => $this->getCreatedAt()->format('Y-m-d H:i:s'),
             'checkedAt' => $this->getCheckedAt()->format('Y-m-d H:i:s'),

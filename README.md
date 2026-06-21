@@ -61,6 +61,49 @@ Make sure the domains are also added in the "Sites Management"!
 
 Setup a cronjob e.g. daily to execute `./flow checklinks:crawl`
 
+### Reducing false positives
+
+Not every non-2xx response means a link is dead. To keep the report trustworthy, findings are
+classified into two states:
+
+ - **broken**: genuinely dead links (`404`, `410`, other `4xx`/`5xx`, missing `node://`/`asset://`
+   targets). Only these trigger email notifications and lower the health score.
+ - **warning**: results that cannot be verified and should not be treated as errors — auth walls
+   (`401`), bot blocks (`403`), rate limiting (`429`), Cloudflare bot challenges, hosts that are
+   known to block crawlers, unfollowed redirects and invalid phone number formats.
+
+The checker also follows redirects (so a `301`/`302` to a working page is no longer reported),
+retries only transient failures (timeouts, `429`, `502`–`504`) with exponential backoff while
+honoring `Retry-After`, and sends an honest, configurable `User-Agent`.
+
+All of this is configurable:
+
+```yaml
+NEOSidekick:
+  LinkChecker:
+    # Regex rules (full patterns incl. delimiters) that suppress matching findings entirely.
+    # Each entry is either a pattern string or {pattern: '/.../', statusCodes: [404]}.
+    ignoreRules:
+      - '#^https://intranet\.example\.com/#'
+
+    classification:
+      # Status codes that are reported as warnings instead of broken links.
+      treatAsWarning: [401, 403, 429]
+      # Treat Cloudflare bot challenges (cf-mitigated / cf-ray headers) as warnings.
+      detectCloudflareChallenge: true
+      # Hosts that routinely block crawlers; findings for these are downgraded to warnings.
+      knownBlockerDomains:
+        - 'linkedin.com'
+        - 'x.com'
+
+    clientOptions:
+      # Follow redirects so a 301/302 to a working page is not reported as broken.
+      allowRedirects: true
+      maxRedirects: 5
+      # Some servers block the default Guzzle user agent.
+      userAgent: 'NEOSidekickLinkChecker/1.0 (+https://neosidekick.com/)'
+```
+
 ### Email reports
 
 The link checker can also send an email if it finds broken links.

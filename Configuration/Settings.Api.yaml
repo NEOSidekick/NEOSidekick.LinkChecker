@@ -8,12 +8,37 @@ NEOSidekick:
 
     excludeUrls: []
 
+    # Regex rules (full patterns incl. delimiters) that suppress matching findings entirely.
+    # Each entry is either a pattern string or {pattern: '/.../', statusCodes: [404]}.
+    ignoreRules: []
+
+    # Reduce false positives by classifying unverifiable results as warnings instead of broken links.
+    classification:
+      # Auth walls, bot blocks and rate limiting cannot be verified and must not count as broken.
+      treatAsWarning: [401, 403, 429]
+      # Treat Cloudflare bot challenges (detected via cf-mitigated / cf-ray headers) as warnings.
+      detectCloudflareChallenge: true
+      # Hosts that routinely block crawlers. Findings for these are downgraded to warnings.
+      knownBlockerDomains:
+        - 'linkedin.com'
+        - 'x.com'
+        - 'twitter.com'
+        - 'instagram.com'
+        - 'facebook.com'
+        - 'youtube.com'
+        - 'play.google.com'
+        - 'drive.google.com'
+
     clientOptions:
       retryAttempts: 2
       cookies: true
       connectionTimeout: 10
       timeout: 10
-      allowRedirects: false
+      # Follow redirects so a 301/302 to a working page is not reported as broken.
+      allowRedirects: true
+      maxRedirects: 5
+      # Honest, descriptive user agent. Some servers block the default Guzzle UA.
+      userAgent: 'NEOSidekickLinkChecker/1.0 (+https://neosidekick.com/)'
       auth: []
 
     notifications:

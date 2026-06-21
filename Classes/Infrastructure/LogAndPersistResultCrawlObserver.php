@@ -26,6 +26,12 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
     protected $resultItemRepository;
 
     /**
+     * @var LinkStatusClassifier
+     * @Flow\Inject
+     */
+    protected $linkStatusClassifier;
+
+    /**
      * @var ConsoleOutput
      * @Flow\Inject
      */
@@ -108,7 +114,7 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
     ): void {
         $statusCode = $response->getStatusCode();
         if (!$this->isExcludedStatusCode($statusCode)) {
-            $this->addCrawlingResultToStore($url, $foundOnUrl, $statusCode);
+            $this->addCrawlingResultToStore($url, $foundOnUrl, $statusCode, $response->getHeaders());
         }
     }
 
@@ -127,8 +133,9 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
     ): void {
         $response = $requestException->getResponse();
         $statusCode = $response instanceof ResponseInterface ? $response->getStatusCode() : (int)$requestException->getCode();
+        $responseHeaders = $response instanceof ResponseInterface ? $response->getHeaders() : [];
         if (!$this->isExcludedStatusCode($statusCode)) {
-            $this->addCrawlingResultToStore($url, $foundOnUrl, $statusCode);
+            $this->addCrawlingResultToStore($url, $foundOnUrl, $statusCode, $responseHeaders);
         }
     }
 
@@ -137,10 +144,14 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
      * We store the crawled url, the status code for this url and if an origin url exists also the location where
      * we got the crawling url from.
      */
+    /**
+     * @param array<string, array<int, string>> $responseHeaders
+     */
     protected function addCrawlingResultToStore(
         UriInterface $crawlingUrl,
         ?UriInterface $originUrl = null,
-        int $statusCode = 200
+        int $statusCode = 200,
+        array $responseHeaders = []
     ): void {
         $cliMessage = "Checked {$crawlingUrl} from {$originUrl} with status {$statusCode}";
         if ($originUrl === null) {
@@ -149,7 +160,8 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
 
         $this->outputLine($cliMessage);
 
-        if ($statusCode === 200) {
+        $state = $this->linkStatusClassifier->classify((string)$crawlingUrl, $statusCode, $responseHeaders);
+        if ($state === ResultItem::STATE_OK) {
             return;
         }
 
@@ -163,6 +175,8 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
             return;
         }
 
+        // Server errors are frequently transient, so defer them for a single revalidation pass
+        // before they are allowed to count as broken.
         if ($statusCode >= 500) {
             $this->pendingServerErrorResultsByTarget[(string)$crawlingUrl][] = [
                 'url' => $crawlingUrl,
@@ -172,7 +186,7 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
             return;
         }
 
-        $this->persistCrawlingResult($crawlingUrl, $originUrl, $statusCode, $parts['host']);
+        $this->persistCrawlingResult($crawlingUrl, $originUrl, $statusCode, $parts['host'], $state);
     }
 
     protected function persistPendingServerErrorResults(): void
@@ -190,7 +204,12 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
                 $finalStatusCode
             ));
 
-            if ($finalStatusCode === 200 || $this->isExcludedStatusCode($finalStatusCode)) {
+            if ($this->isExcludedStatusCode($finalStatusCode)) {
+                continue;
+            }
+
+            $state = $this->linkStatusClassifier->classify((string)$pendingResults[0]['url'], $finalStatusCode);
+            if ($state === ResultItem::STATE_OK) {
                 continue;
             }
 
@@ -204,7 +223,8 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
                     $pendingResult['url'],
                     $pendingResult['originUrl'],
                     $finalStatusCode,
-                    $parts['host']
+                    $parts['host'],
+                    $state
                 );
             }
         }
@@ -247,13 +267,15 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
         UriInterface $crawlingUrl,
         UriInterface $originUrl,
         int $statusCode,
-        string $domain
+        string $domain,
+        string $state = ResultItem::STATE_BROKEN
     ): void {
         $linkCheckItem = new ResultItem();
         $linkCheckItem->setDomain($domain);
         $linkCheckItem->setSourcePath((string)$originUrl);
         $linkCheckItem->setTarget((string)$crawlingUrl);
         $linkCheckItem->setStatusCode($statusCode);
+        $linkCheckItem->setState($state);
         $linkCheckItem->setCreatedAt(new \DateTime());
         $linkCheckItem->setCheckedAt(new \DateTime());
 

@@ -40,6 +40,10 @@ class LinkHealthScoreService
     {
         $sourceKeys = [];
         foreach ($links as $link) {
+            // Warnings (auth walls, rate limits, redirects) must not lower the health score.
+            if (!$link->isBroken()) {
+                continue;
+            }
             $sourceKeys[$this->sourceKey($link)] = true;
         }
 

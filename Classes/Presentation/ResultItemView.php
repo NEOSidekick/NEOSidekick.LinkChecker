@@ -69,6 +69,16 @@ final class ResultItemView
         return $this->resultItem->getStatusCode();
     }
 
+    public function getState(): string
+    {
+        return $this->resultItem->getState();
+    }
+
+    public function isBroken(): bool
+    {
+        return $this->resultItem->isBroken();
+    }
+
     public function getCheckedAt(): DateTimeInterface
     {
         return $this->resultItem->getCheckedAt();
