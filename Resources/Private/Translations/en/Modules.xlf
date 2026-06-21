@@ -113,6 +113,9 @@
             <trans-unit id="error.408">
                 <source>Request Timeout (408)</source>
             </trans-unit>
+            <trans-unit id="error.410">
+                <source>Gone (410)</source>
+            </trans-unit>
             <trans-unit id="error.429">
                 <source>Too Many Requests (429)</source>
             </trans-unit>

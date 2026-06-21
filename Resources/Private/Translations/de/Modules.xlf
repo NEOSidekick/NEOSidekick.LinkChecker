@@ -113,6 +113,9 @@
             <trans-unit id="error.408">
                 <source>Anfrage-Zeitüberschreitung (408)</source>
             </trans-unit>
+            <trans-unit id="error.410">
+                <source>Nicht mehr vorhanden (410)</source>
+            </trans-unit>
             <trans-unit id="error.429">
                 <source>Zu viele Anfragen (429)</source>
             </trans-unit>
