@@ -1,19 +1,49 @@
 NEOSidekick.LinkChecker.Backend.ModuleController {
     index = afx`
         <NEOSidekick.LinkChecker:Component.FlashMessages flashMessages={flashMessages}/>
-        <NEOSidekick.LinkChecker:Backend.Module.Index links={links} groupedLinks={groupedLinks}/>
+        <NEOSidekick.LinkChecker:Backend.Module.Index links={links} groupedLinks={groupedLinks} queueStatus={queueStatus}/>
     `
 
     run = afx`
         <NEOSidekick.LinkChecker:Component.FlashMessages flashMessages={flashMessages}/>
-        Crawling was started come back later to the link checker to see the results.
-        <div style="padding-top: 1rem">
-            <Sitegeist.FusionLinkPrototypes:ModuleLink
-                content="Back to the overview"
-                attributes.class="neos-button"
-                module='management/link-checker'
-                action='index'
-            />
+        <div class="link-checker-run-page">
+            <section class="link-checker-run-panel">
+                <div class={queueStatus.queued ? 'link-checker-run-panel__icon link-checker-run-panel__icon--queued' : 'link-checker-run-panel__icon link-checker-run-panel__icon--active'}>
+                    <i class={queueStatus.queued ? 'fas fa-check' : 'fas fa-sync-alt'}></i>
+                </div>
+                <div class="link-checker-run-panel__content">
+                    <h2 class="link-checker-run-panel__title">
+                        <Neos.Fusion:Fragment @if={queueStatus.queued}>
+                            {I18n.translate('NEOSidekick.LinkChecker:Modules:run.titleQueued')}
+                        </Neos.Fusion:Fragment>
+                        <Neos.Fusion:Fragment @if={!queueStatus.queued}>
+                            {I18n.translate('NEOSidekick.LinkChecker:Modules:run.titleActive')}
+                        </Neos.Fusion:Fragment>
+                    </h2>
+                    <p class="link-checker-run-panel__message">
+                        <Neos.Fusion:Fragment @if={queueStatus.queued}>
+                            {I18n.translate('NEOSidekick.LinkChecker:Modules:run.started')}
+                        </Neos.Fusion:Fragment>
+                        <Neos.Fusion:Fragment @if={!queueStatus.queued}>
+                            {I18n.translate('NEOSidekick.LinkChecker:Modules:run.resetWhileActive')}
+                        </Neos.Fusion:Fragment>
+                    </p>
+                    <div @if={queueStatus} class="link-checker-run-status" aria-label={I18n.translate('NEOSidekick.LinkChecker:Modules:queue.status')}>
+                        <span class="link-checker-run-status__label">{I18n.translate('NEOSidekick.LinkChecker:Modules:queue.status')}</span>
+                        <span class="link-checker-run-status__item">{I18n.translate('NEOSidekick.LinkChecker:Modules:queue.ready')}: <strong>{queueStatus.ready}</strong></span>
+                        <span class="link-checker-run-status__item">{I18n.translate('NEOSidekick.LinkChecker:Modules:queue.reserved')}: <strong>{queueStatus.reserved}</strong></span>
+                        <span class="link-checker-run-status__item">{I18n.translate('NEOSidekick.LinkChecker:Modules:queue.failed')}: <strong>{queueStatus.failed}</strong></span>
+                    </div>
+                    <div class="link-checker-run-panel__actions">
+                        <Sitegeist.FusionLinkPrototypes:ModuleLink
+                            content={I18n.translate('NEOSidekick.LinkChecker:Modules:run.back')}
+                            attributes.class="neos-button neos-button-primary"
+                            module='management/link-checker'
+                            action='index'
+                        />
+                    </div>
+                </div>
+            </section>
         </div>
     `
 }

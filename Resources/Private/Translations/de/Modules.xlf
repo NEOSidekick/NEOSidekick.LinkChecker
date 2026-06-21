@@ -259,6 +259,37 @@
                 <source>Erneut überprüfen und zurücksetzen</source>
             </trans-unit>
 
+            <trans-unit id="run.started">
+                <source>Bestehende Ergebnisse wurden zurückgesetzt und ein Crawl-Job wurde eingereiht. Komm später zurück, um die neuen Ergebnisse zu sehen.</source>
+            </trans-unit>
+            <trans-unit id="run.titleQueued">
+                <source>Crawl eingereiht</source>
+            </trans-unit>
+            <trans-unit id="run.titleActive">
+                <source>Ergebnisse zurückgesetzt</source>
+            </trans-unit>
+            <trans-unit id="run.resetWhileActive">
+                <source>Bestehende Ergebnisse wurden zurückgesetzt. Ein Crawl läuft bereits oder wartet in der Warteschlange, daher wurde kein weiterer Crawl eingereiht.</source>
+            </trans-unit>
+            <trans-unit id="run.back">
+                <source>Zurück zur Übersicht</source>
+            </trans-unit>
+            <trans-unit id="queue.status">
+                <source>Crawl-Warteschlange</source>
+            </trans-unit>
+            <trans-unit id="queue.ready">
+                <source>Wartend</source>
+            </trans-unit>
+            <trans-unit id="queue.reserved">
+                <source>Laufend</source>
+            </trans-unit>
+            <trans-unit id="queue.failed">
+                <source>Fehlgeschlagen</source>
+            </trans-unit>
+            <trans-unit id="queue.activeHint">
+                <source>Bestehende Ergebnisse werden zurückgesetzt. Ein Crawl läuft bereits oder wartet in der Warteschlange.</source>
+            </trans-unit>
+
             <trans-unit id="list.empty">
                 <source>Es gibt keine fehlerhaften Links.</source>
             </trans-unit>

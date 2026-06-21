@@ -808,22 +808,155 @@
 /* ===== Footer (rendered outside .link-checker-groups) ================== */
 
 .link-checker-footer.neos-footer {
-    position: relative !important;
-    right: auto !important;
-    bottom: auto !important;
-    left: auto !important;
-    z-index: auto !important;
-    display: block;
-    min-height: 0;
-    margin: 28px 0 0;
-    padding: 18px 0 0;
-    border-top: 1px solid rgba(255, 255, 255, .08);
-    background: transparent;
+    position: fixed !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    z-index: 10000 !important;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 24px;
+    box-sizing: border-box;
+    width: auto !important;
+    height: auto !important;
+    min-height: 72px;
+    overflow: visible !important;
+    margin: 0 !important;
+    margin-left: 0 !important;
+    padding: 14px 30px 16px !important;
+    border-top: 1px solid rgba(255, 255, 255, .12);
+    background: #141414;
+}
+
+.neos.neos-module-management-link-checker .neos-content,
+.link-checker-module {
+    padding-bottom: 104px;
+}
+
+.link-checker-footer .neos-inline {
+    order: 1;
+    flex: 0 0 auto;
+    margin: 0 !important;
+}
+
+.neos .link-checker-footer .neos-button {
+    box-sizing: border-box;
+    max-width: calc(100vw - 60px);
+    min-height: 44px !important;
+    height: auto !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    line-height: 1.2 !important;
+    white-space: normal;
+}
+
+.neos .link-checker-queue-status,
+.neos .link-checker-run-status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    color: #adadad;
+    font-size: 12px;
+}
+
+.neos .link-checker-queue-status {
+    order: 2;
+    align-items: center;
+    margin: 0;
+}
+
+.neos .link-checker-run-status {
+    margin-top: 12px;
+    margin-bottom: 12px;
+}
+
+.link-checker-run-page {
+    max-width: 960px;
+    padding: 32px 0 0;
+}
+
+.link-checker-run-panel {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+    padding: 22px 24px;
+    background: #262626;
+}
+
+.link-checker-run-panel__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    color: #fff;
+    background: #00adee;
+}
+
+.link-checker-run-panel__icon--active {
+    background: #ff8700;
+}
+
+.link-checker-run-panel__title {
+    margin: 0 0 8px;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+.link-checker-run-panel__message {
+    max-width: 820px;
+    margin: 0;
+    color: #d8d8d8;
+    font-size: 15px;
+    line-height: 1.45;
+}
+
+.link-checker-run-status {
+    align-items: center;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.link-checker-run-status__label {
+    margin-right: 4px;
+    color: #d8d8d8;
+    font-weight: 600;
+}
+
+.link-checker-run-status__item {
+    padding: 5px 9px;
+    color: #cfcfcf;
+    background: rgba(255, 255, 255, .07);
+}
+
+.link-checker-run-status__item strong {
+    color: #fff;
+    font-weight: 700;
+}
+
+.link-checker-run-panel__actions {
+    display: flex;
+    margin-top: 30px;
 }
 
 /* ===== Responsive ====================================================== */
 
 @media (max-width: 980px) {
+    .link-checker-run-page {
+        padding-top: 20px;
+    }
+
+    .link-checker-run-panel {
+        grid-template-columns: 1fr;
+        padding: 20px;
+    }
+
     .link-checker-groups .link-checker-workspace {
         grid-template-columns: 1fr;
         gap: 16px;

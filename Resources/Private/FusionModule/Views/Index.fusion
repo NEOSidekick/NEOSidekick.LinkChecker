@@ -1,20 +1,28 @@
 prototype(NEOSidekick.LinkChecker:Backend.Module.Index) < prototype(Neos.Fusion:Component) {
     links = '[]'
     groupedLinks = null
+    queueStatus = null
 
     runAction = Neos.Fusion:UriBuilder {
         action = 'run'
     }
 
     renderer = afx`
-        <div class="neos-content neos-container-fluid">
+        <div class="neos-content neos-container-fluid link-checker-module">
             <div class="neos-row-fluid">
                 <NEOSidekick.LinkChecker:Component.Links.GroupedList groupedLinks={props.groupedLinks}/>
             </div>
             <div class="neos-footer link-checker-footer">
+                <div @if={props.queueStatus && props.queueStatus.total > 0} class="link-checker-queue-status">
+                    <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:queue.status')}</span>
+                    <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:queue.ready')}: {props.queueStatus.ready}</span>
+                    <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:queue.reserved')}: {props.queueStatus.reserved}</span>
+                    <span>{I18n.translate('NEOSidekick.LinkChecker:Modules:queue.failed')}: {props.queueStatus.failed}</span>
+                </div>
                 <Neos.Fusion.Form:Form form.target={props.runAction} attributes.class="neos-inline">
                     <Neos.Fusion.Form:Button
                         attributes.class="neos-button neos-button-primary"
+                        attributes.title={props.queueStatus && !props.queueStatus.canQueue ? I18n.translate('NEOSidekick.LinkChecker:Modules:queue.activeHint') : ''}
                     >
                         {I18n.translate('NEOSidekick.LinkChecker:Modules:action.run')}
                     </Neos.Fusion.Form:Button>

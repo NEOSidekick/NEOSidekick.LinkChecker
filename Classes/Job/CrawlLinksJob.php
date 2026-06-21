@@ -42,6 +42,11 @@ class CrawlLinksJob implements JobInterface
         $this->clearExistingResults = $clearExistingResults;
     }
 
+    public function __sleep(): array
+    {
+        return ['withNotification', 'onlyChanged', 'clearExistingResults'];
+    }
+
     public function execute(QueueInterface $queue, Message $message): bool
     {
         if ($this->clearExistingResults) {

@@ -259,6 +259,37 @@
                 <source>Check again and reset</source>
             </trans-unit>
 
+            <trans-unit id="run.started">
+                <source>Existing results were reset and a crawl job was queued. Come back later to see the new results.</source>
+            </trans-unit>
+            <trans-unit id="run.titleQueued">
+                <source>Crawl queued</source>
+            </trans-unit>
+            <trans-unit id="run.titleActive">
+                <source>Results reset</source>
+            </trans-unit>
+            <trans-unit id="run.resetWhileActive">
+                <source>Existing results were reset. A crawl is already running or waiting in the queue, so no additional crawl was queued.</source>
+            </trans-unit>
+            <trans-unit id="run.back">
+                <source>Back to the overview</source>
+            </trans-unit>
+            <trans-unit id="queue.status">
+                <source>Crawl queue</source>
+            </trans-unit>
+            <trans-unit id="queue.ready">
+                <source>Pending</source>
+            </trans-unit>
+            <trans-unit id="queue.reserved">
+                <source>Running</source>
+            </trans-unit>
+            <trans-unit id="queue.failed">
+                <source>Failed</source>
+            </trans-unit>
+            <trans-unit id="queue.activeHint">
+                <source>Existing results will be reset. A crawl is already running or waiting in the queue.</source>
+            </trans-unit>
+
             <trans-unit id="list.empty">
                 <source>There are currently no invalid links.</source>
             </trans-unit>

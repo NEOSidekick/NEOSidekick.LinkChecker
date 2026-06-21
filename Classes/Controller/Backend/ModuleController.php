@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace NEOSidekick\LinkChecker\Controller\Backend;
 
-use Flowpack\JobQueue\Common\Job\JobManager;
 use NEOSidekick\LinkChecker\Domain\Model\ResultItem;
 use NEOSidekick\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
-use NEOSidekick\LinkChecker\Job\CrawlLinksJob;
+use NEOSidekick\LinkChecker\Infrastructure\CrawlQueueService;
 use NEOSidekick\LinkChecker\Presentation\GroupedResultItemListView;
 use NEOSidekick\LinkChecker\Presentation\LinkHealthScoreService;
 use NEOSidekick\LinkChecker\Presentation\ResultItemFilterOptionView;
@@ -34,12 +33,6 @@ class ModuleController extends AbstractModuleController
     protected $resultItemRepository;
 
     /**
-     * @var JobManager
-     * @Flow\Inject
-     */
-    protected $jobManager;
-
-    /**
      * @var ResultItemViewFactory
      * @Flow\Inject
      */
@@ -56,6 +49,12 @@ class ModuleController extends AbstractModuleController
      * @Flow\Inject
      */
     protected $linkHealthScoreService;
+
+    /**
+     * @var CrawlQueueService
+     * @Flow\Inject
+     */
+    protected $crawlQueueService;
 
     public function indexAction(
         string $groupBy = ResultItemGroupingService::MODE_TARGET,
@@ -87,6 +86,7 @@ class ModuleController extends AbstractModuleController
             'links' => $links,
             'groupedLinks' => $this->serializeGroupedLinks($groupedLinks, $this->linkHealthScoreService->create($links)),
             'flashMessages' => $flashMessages,
+            'queueStatus' => $this->crawlQueueService->getStatus(),
         ]);
     }
 
@@ -432,7 +432,7 @@ class ModuleController extends AbstractModuleController
 
     public function runAction(): void
     {
-        $this->jobManager->queue(CrawlLinksJob::QUEUE_NAME, new CrawlLinksJob());
+        $this->view->assign('queueStatus', $this->crawlQueueService->resetResultsAndQueueCrawl());
     }
 
     public function deleteAction(ResultItem $resultItem): void
