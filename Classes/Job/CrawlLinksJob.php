@@ -7,22 +7,18 @@ namespace NEOSidekick\LinkChecker\Job;
 use Flowpack\JobQueue\Common\Job\JobInterface;
 use Flowpack\JobQueue\Common\Queue\Message;
 use Flowpack\JobQueue\Common\Queue\QueueInterface;
+use NEOSidekick\LinkChecker\Infrastructure\LinkCheckRunner;
 use Neos\Flow\Annotations as Flow;
-use Neos\Flow\Core\Booting\Scripts;
 
 class CrawlLinksJob implements JobInterface
 {
     public const QUEUE_NAME = 'NEOSidekick.LinkChecker.Crawl';
 
-    private const COMMAND_IDENTIFIER = 'neosidekick.linkchecker:checklinks:crawl';
-
-    private const CLEAR_COMMAND_IDENTIFIER = 'neosidekick.linkchecker:checklinks:clear';
-
     /**
-     * @Flow\InjectConfiguration(package="Neos.Flow")
-     * @var array
+     * @Flow\Inject
+     * @var LinkCheckRunner
      */
-    protected $flowSettings = [];
+    protected $linkCheckRunner;
 
     /**
      * @var bool
@@ -49,9 +45,9 @@ class CrawlLinksJob implements JobInterface
     public function execute(QueueInterface $queue, Message $message): bool
     {
         if ($this->clearExistingResults) {
-            Scripts::executeCommand(self::CLEAR_COMMAND_IDENTIFIER, $this->flowSettings, true, ['keep-ignored' => '1']);
+            $this->linkCheckRunner->clearResults(true);
         }
-        Scripts::executeCommand(self::COMMAND_IDENTIFIER, $this->flowSettings, true, $this->createCommandArguments());
+        $this->linkCheckRunner->crawl($this->withNotification, $this->onlyChanged);
         return true;
     }
 
@@ -72,19 +68,5 @@ class CrawlLinksJob implements JobInterface
             'NEOSidekick.LinkChecker crawl%s',
             $options === [] ? '' : ' (' . implode(', ', $options) . ')'
         );
-    }
-
-    private function createCommandArguments(): array
-    {
-        $arguments = [];
-
-        if ($this->withNotification) {
-            $arguments['with-notification'] = '1';
-        }
-        if ($this->onlyChanged) {
-            $arguments['only-changed'] = '1';
-        }
-
-        return $arguments;
     }
 }
