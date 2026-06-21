@@ -1,3 +1,25 @@
+Neos:
+  Neos:
+    userInterface:
+      translation:
+        autoInclude:
+          'NEOSidekick.LinkChecker': ['Modules']
+    modules:
+      management:
+        submodules:
+          link-checker:
+            label: 'NEOSidekick.LinkChecker:Modules:module.label'
+            description: 'NEOSidekick.LinkChecker:Modules:module.description'
+            icon: 'fas fa-link'
+            controller: NEOSidekick\LinkChecker\Controller\Backend\ModuleController
+            resource: 'NEOSidekick.LinkChecker:Backend.Module'
+            additionalResources:
+              styleSheets:
+                - 'resource://NEOSidekick.LinkChecker/Public/Styles/link-checker.css'
+    fusion:
+      autoInclude:
+        NEOSidekick.LinkChecker: true
+
 Flowpack:
   JobQueue:
     Common:

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace NEOSidekick\LinkChecker\Controller\Backend;
 
+use Flowpack\JobQueue\Common\Job\JobManager;
 use NEOSidekick\LinkChecker\Domain\Model\ResultItem;
 use NEOSidekick\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
+use NEOSidekick\LinkChecker\Job\CrawlLinksJob;
 use NEOSidekick\LinkChecker\Presentation\GroupedResultItemListView;
 use NEOSidekick\LinkChecker\Presentation\LinkHealthScoreService;
 use NEOSidekick\LinkChecker\Presentation\ResultItemFilterOptionView;
@@ -15,8 +17,6 @@ use NEOSidekick\LinkChecker\Presentation\ResultItemGroupingService;
 use NEOSidekick\LinkChecker\Presentation\ResultItemView;
 use NEOSidekick\LinkChecker\Presentation\ResultItemViewFactory;
 use Neos\Flow\Annotations as Flow;
-use Neos\Flow\Configuration\ConfigurationManager;
-use Neos\Flow\Core\Booting\Scripts;
 use Neos\Fusion\View\FusionView;
 use Neos\Neos\Controller\Module\AbstractModuleController;
 
@@ -34,10 +34,10 @@ class ModuleController extends AbstractModuleController
     protected $resultItemRepository;
 
     /**
-     * @var ConfigurationManager
+     * @var JobManager
      * @Flow\Inject
      */
-    protected $configurationManager;
+    protected $jobManager;
 
     /**
      * @var ResultItemViewFactory
@@ -432,9 +432,7 @@ class ModuleController extends AbstractModuleController
 
     public function runAction(): void
     {
-        $this->resultItemRepository->removeAllNonIgnored();
-        $settings = $this->configurationManager->getConfiguration(ConfigurationManager::CONFIGURATION_TYPE_SETTINGS, 'Neos.Flow');
-        Scripts::executeCommandAsync("neosidekick.linkchecker:checklinks:crawl", $settings);
+        $this->jobManager->queue(CrawlLinksJob::QUEUE_NAME, new CrawlLinksJob());
     }
 
     public function deleteAction(ResultItem $resultItem): void

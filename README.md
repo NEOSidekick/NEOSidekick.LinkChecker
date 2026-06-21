@@ -59,7 +59,91 @@ NEOSidekick:
 
 Make sure the domains are also added in the "Sites Management"!
 
-Setup a cronjob e.g. daily to execute `./flow checklinks:crawl`
+Setup a cronjob e.g. daily to execute `./flow checklinks:crawl`.
+
+### Backend module crawl queue
+
+The backend module starts crawls through `Flowpack.JobQueue.Common`. The package ships a 
+Doctrine-backed queue named `NEOSidekick.LinkChecker.Crawl` and stores its messages in the table
+`neosidekick_linkchecker_jobqueue_crawl`. When the worker starts a backend-triggered crawl, it first
+removes all non-ignored previous findings and then runs the normal crawl command.
+
+After installing the package, initialize the queue once:
+
+```bash
+./flow flowpack.jobqueue.common:queue:setup NEOSidekick.LinkChecker.Crawl
+```
+
+You can verify the queue configuration with:
+
+```bash
+./flow flowpack.jobqueue.common:queue:list
+./flow flowpack.jobqueue.common:queue:describe NEOSidekick.LinkChecker.Crawl
+```
+
+Run a worker for the crawl queue:
+
+```bash
+./flow flowpack.jobqueue.common:job:work NEOSidekick.LinkChecker.Crawl --verbose
+```
+
+For production, run the worker under a process supervisor such as systemd, supervisord or your
+container platform. The worker should be restarted if it exits. A minimal systemd service looks like:
+
+```ini
+[Unit]
+Description=NEOSidekick LinkChecker crawl worker
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/html
+ExecStart=/var/www/html/flow flowpack.jobqueue.common:job:work NEOSidekick.LinkChecker.Crawl --verbose
+Restart=always
+RestartSec=5
+User=www-data
+
+[Install]
+WantedBy=multi-user.target
+```
+
+If you cannot run a permanent worker, run short-lived workers from cron:
+
+```cron
+* * * * * cd /var/www/html && ./flow flowpack.jobqueue.common:job:work NEOSidekick.LinkChecker.Crawl --exit-after 55
+```
+
+Inspect queued jobs and failed messages with:
+
+```bash
+./flow flowpack.jobqueue.common:job:list NEOSidekick.LinkChecker.Crawl --limit 10
+./flow flowpack.jobqueue.common:queue:list
+```
+
+With the default Doctrine queue, operators can also inspect the queue table directly:
+
+```sql
+SELECT state, COUNT(*) FROM neosidekick_linkchecker_jobqueue_crawl GROUP BY state;
+SELECT id, state, failures, scheduled FROM neosidekick_linkchecker_jobqueue_crawl ORDER BY id;
+```
+
+Successful jobs are removed from the table. Failed jobs remain with `state = 'failed'`.
+
+Projects that already use another JobQueue backend can override only this queue. For example, to use
+Redis instead of Doctrine:
+
+```yaml
+Flowpack:
+  JobQueue:
+    Common:
+      queues:
+        'NEOSidekick.LinkChecker.Crawl':
+          className: 'Flowpack\JobQueue\Redis\Queue\RedisQueue'
+          options:
+            client:
+              host: 127.0.0.1
+              port: 6379
+```
 
 ### Reducing false positives
 
@@ -167,7 +251,6 @@ NEOSidekick:
 
 ## Limitations and possible future Features:
  - Support additional languages
- - Use a job queue for crawling
  - Update the link checks after a page is published via a job queue
  - Check external links against malware oder security adviser lists
  - Find all occurrences of external links to internal pages
