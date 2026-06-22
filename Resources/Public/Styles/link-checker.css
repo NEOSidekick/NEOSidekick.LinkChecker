@@ -868,6 +868,21 @@
     margin: 0;
 }
 
+.neos .link-checker-footer__credit {
+    position: absolute;
+    right: 30px;
+    bottom: 16px;
+    color: #777 !important;
+    font-size: 12px;
+    line-height: 1;
+    text-decoration: none !important;
+}
+
+.neos .link-checker-footer__credit:hover,
+.neos .link-checker-footer__credit:focus {
+    color: #adadad !important;
+}
+
 .neos .link-checker-run-status {
     margin-top: 12px;
     margin-bottom: 12px;
