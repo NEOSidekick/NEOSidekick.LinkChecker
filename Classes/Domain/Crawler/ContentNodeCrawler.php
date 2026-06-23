@@ -115,7 +115,7 @@ class ContentNodeCrawler
                         $targetIsVisible = $linkedNode && $this->findIsNodeVisible($linkedNode);
                         break;
                     case 'asset':
-                        $targetIsVisible = $this->linkingService->resolveAssetUri($identifier) !== null;
+                        $targetIsVisible = $this->linkingService->convertUriToObject($identifier) !== null;
                         break;
                 }
 
