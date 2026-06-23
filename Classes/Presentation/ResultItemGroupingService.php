@@ -24,7 +24,15 @@ class ResultItemGroupingService
     /**
      * @param array<ResultItemView> $links
      */
-    public function group(array $links, string $mode, string $targetType, string $domain, string $statusCode, string $impact): GroupedResultItemListView
+    public function group(
+        array $links,
+        string $mode,
+        string $targetType,
+        string $domain,
+        string $statusCode,
+        string $impact,
+        bool $filterByImpact = true
+    ): GroupedResultItemListView
     {
         $mode = $this->normalizeMode($mode);
         $targetType = $targetType !== '' ? $targetType : 'all';
@@ -40,7 +48,7 @@ class ResultItemGroupingService
         $groups = $this->createGroups($filteredLinks, $mode);
         $impactOptions = $this->createImpactOptions($groups);
 
-        if ($impact !== self::IMPACT_ALL) {
+        if ($filterByImpact && $impact !== self::IMPACT_ALL) {
             $groups = array_values(array_filter(
                 $groups,
                 fn (ResultItemGroupView $group) => $this->groupMatchesImpact($group, $impact)

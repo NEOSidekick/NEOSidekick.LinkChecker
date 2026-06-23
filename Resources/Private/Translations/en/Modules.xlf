@@ -384,6 +384,12 @@
             <trans-unit id="filter.reset">
                 <source>Reset filters</source>
             </trans-unit>
+            <trans-unit id="pagination.loaded">
+                <source>Loaded {0} of {1} link occurrences</source>
+            </trans-unit>
+            <trans-unit id="pagination.loadMore">
+                <source>Load {0} more</source>
+            </trans-unit>
             <trans-unit id="filter.targetType">
                 <source>Broken link type</source>
             </trans-unit>

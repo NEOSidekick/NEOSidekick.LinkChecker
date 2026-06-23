@@ -23,7 +23,7 @@ prototype(NEOSidekick.LinkChecker:Component.Links.GroupedList) < prototype(Neos.
 
     renderer = afx`
         <div class="link-checker-groups">
-            <div @if={props.groupedLinks.rawCount > 0} class="link-checker-workspace">
+            <div @if={props.groupedLinks.hasStoredResults} class="link-checker-workspace">
                 <details class="link-checker-sidebar" open>
                     <summary class="link-checker-sidebar__toggle">
                         <span>
@@ -133,10 +133,19 @@ prototype(NEOSidekick.LinkChecker:Component.Links.GroupedList) < prototype(Neos.
                     <Neos.Fusion:Loop items={props.groupedLinks.groups} itemName="group">
                         <NEOSidekick.LinkChecker:Component.Links.Group group={group} hasMultipleDomains={props.groupedLinks.hasMultipleDomains}/>
                     </Neos.Fusion:Loop>
+
+                    <div @if={props.groupedLinks.hasMoreResults} class="link-checker-load-more">
+                        <span class="link-checker-load-more__status">
+                            {I18n.id("pagination.loaded").arguments([props.groupedLinks.loadedResultCount, props.groupedLinks.totalResultCount]).source("Modules").package("NEOSidekick.LinkChecker").translate()}
+                        </span>
+                        <a @if={props.groupedLinks.hasMoreResults && props.groupedLinks.loadMoreUri} href={props.groupedLinks.loadMoreUri} class="link-checker-load-more__button">
+                            {I18n.id("pagination.loadMore").arguments([props.groupedLinks.resultLimitIncrement]).source("Modules").package("NEOSidekick.LinkChecker").translate()}
+                        </a>
+                    </div>
                 </div>
             </div>
 
-            <div @if={props.groupedLinks.rawCount == 0 && !props.groupedLinks.hasResults} class="link-checker-empty-state">
+            <div @if={!props.groupedLinks.hasStoredResults} class="link-checker-empty-state">
                 {I18n.translate('NEOSidekick.LinkChecker:Modules:list.empty')}
             </div>
         </div>

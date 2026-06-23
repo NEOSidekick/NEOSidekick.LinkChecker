@@ -324,6 +324,27 @@ class InMemoryResultItemRepository implements ResultItemRepositoryInterface
         throw new \BadMethodCallException('Not implemented for this test.');
     }
 
+    public function findFirstNonIgnored(int $limit): QueryResultInterface
+    {
+        throw new \BadMethodCallException('Not implemented for this test.');
+    }
+
+    public function findFilteredNonIgnored(
+        int $limit,
+        string $targetType,
+        string $domain,
+        string $statusCode,
+        string $impact
+    ): QueryResultInterface
+    {
+        throw new \BadMethodCallException('Not implemented for this test.');
+    }
+
+    public function countFilteredNonIgnored(string $targetType, string $domain, string $statusCode, string $impact): int
+    {
+        throw new \BadMethodCallException('Not implemented for this test.');
+    }
+
     public function remove(ResultItem $resultItem): void
     {
         throw new \BadMethodCallException('Not implemented for this test.');

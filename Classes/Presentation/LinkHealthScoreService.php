@@ -16,7 +16,11 @@ class LinkHealthScoreService
      */
     public function create(array $links, int $totalInternalPageCount): array
     {
-        $affectedSourcePageCount = $this->countAffectedSourcePages($links);
+        return $this->createFromAffectedSourcePageCount($this->countAffectedSourcePages($links), $totalInternalPageCount);
+    }
+
+    public function createFromAffectedSourcePageCount(int $affectedSourcePageCount, int $totalInternalPageCount): array
+    {
         $scoreDenominator = max($totalInternalPageCount, $affectedSourcePageCount);
         $score = $scoreDenominator > 0
             ? (int)max(0, min(100, round((($scoreDenominator - $affectedSourcePageCount) / $scoreDenominator) * 100)))

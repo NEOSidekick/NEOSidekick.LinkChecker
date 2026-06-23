@@ -8,3 +8,8 @@ NEOSidekick_LinkChecker_LinkTarget:
 NEOSidekick_LinkChecker_CrawlState:
   frontend: Neos\Cache\Frontend\VariableFrontend
   backend: Neos\Cache\Backend\FileBackend
+
+# Caches backend module aggregate counts so the sidebar does not need to hydrate every result row.
+NEOSidekick_LinkChecker_BackendStatistics:
+  frontend: Neos\Cache\Frontend\VariableFrontend
+  backend: Neos\Cache\Backend\FileBackend

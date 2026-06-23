@@ -401,6 +401,59 @@
     text-decoration: none;
 }
 
+/* ===== Load more ======================================================== */
+
+.link-checker-groups .link-checker-load-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 16px;
+    color: var(--lc-text-muted);
+    background: var(--lc-panel);
+    border-radius: var(--lc-radius);
+}
+
+.link-checker-groups .link-checker-load-more__status {
+    font-size: 12px;
+    line-height: 16px;
+}
+
+.link-checker-groups .link-checker-load-more__button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: var(--lc-radius-sm);
+    color: #fff;
+    background: var(--lc-accent);
+    font: inherit;
+    font-size: 12px;
+    line-height: 16px;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color .12s ease;
+}
+
+.link-checker-groups .link-checker-load-more__button::before {
+    content: "\f067";
+    font-family: "Font Awesome 5 Free", "Font Awesome 6 Free", FontAwesome;
+    font-weight: 900;
+    font-size: 11px;
+}
+
+.link-checker-groups .link-checker-load-more__button:visited,
+.link-checker-groups .link-checker-load-more__button:hover,
+.link-checker-groups .link-checker-load-more__button:focus,
+.link-checker-groups .link-checker-load-more__button:active {
+    color: #fff !important;
+    background: #008fc5;
+    text-decoration: none;
+}
+
 /* ===== Results: empty state ============================================ */
 
 .link-checker-groups .link-checker-empty-state {

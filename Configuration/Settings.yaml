@@ -50,6 +50,10 @@ NEOSidekick:
 
     excludeUrls: []
 
+    backend:
+      # Number of result rows the backend module loads on first page render and per "load more" step.
+      resultLimit: 200
+
     # Regex rules (full patterns incl. delimiters) that suppress matching findings entirely.
     # Each entry is either a pattern string or {pattern: '/.../', statusCodes: [404]}.
     ignoreRules: []

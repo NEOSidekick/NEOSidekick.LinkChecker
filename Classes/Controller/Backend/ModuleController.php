@@ -6,6 +6,7 @@ namespace NEOSidekick\LinkChecker\Controller\Backend;
 
 use NEOSidekick\LinkChecker\Domain\Model\ResultItem;
 use NEOSidekick\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
+use NEOSidekick\LinkChecker\Infrastructure\BackendStatisticsService;
 use NEOSidekick\LinkChecker\Infrastructure\CrawlQueueService;
 use NEOSidekick\LinkChecker\Infrastructure\SitePageCountService;
 use NEOSidekick\LinkChecker\Presentation\GroupedResultItemListView;
@@ -63,16 +64,34 @@ class ModuleController extends AbstractModuleController
      */
     protected $sitePageCountService;
 
+    /**
+     * @var BackendStatisticsService
+     * @Flow\Inject
+     */
+    protected $backendStatisticsService;
+
+    /**
+     * @Flow\InjectConfiguration(path="backend.resultLimit")
+     */
+    protected int $resultLimit = 200;
+
     public function indexAction(
         string $groupBy = ResultItemGroupingService::MODE_TARGET,
         string $targetType = 'all',
         string $domain = 'all',
         string $statusCode = 'all',
         string $impact = ResultItemGroupingService::IMPACT_ALL,
+        int $limit = 0,
         bool $highImpactOnly = false
     ): void
     {
-        $resultItems = $this->resultItemRepository->findAll();
+        $limit = $this->normalizeResultLimit($limit);
+        $statistics = $this->backendStatisticsService->create();
+        $activeImpact = $highImpactOnly && $impact === ResultItemGroupingService::IMPACT_ALL
+            ? ResultItemGroupingService::IMPACT_3_PLUS
+            : $impact;
+        $resultItems = $this->resultItemRepository->findFilteredNonIgnored($limit, $targetType, $domain, $statusCode, $activeImpact);
+        $totalListResultCount = $this->resultItemRepository->countFilteredNonIgnored($targetType, $domain, $statusCode, $activeImpact);
         $flashMessages = $this->controllerContext->getFlashMessageContainer()->getMessagesAndFlush();
 
         $links = array_map(
@@ -86,23 +105,49 @@ class ModuleController extends AbstractModuleController
             $targetType,
             $domain,
             $statusCode,
-            $highImpactOnly && $impact === ResultItemGroupingService::IMPACT_ALL ? ResultItemGroupingService::IMPACT_3_PLUS : $impact
+            $activeImpact,
+            $activeImpact === ResultItemGroupingService::IMPACT_ALL
         );
 
         $this->view->assignMultiple([
             'links' => $links,
             'groupedLinks' => $this->serializeGroupedLinks(
                 $groupedLinks,
-                $this->linkHealthScoreService->create($links, $this->sitePageCountService->countTotalVisibleDocumentPages())
+                $this->linkHealthScoreService->createFromAffectedSourcePageCount(
+                    $statistics['affectedBrokenSourcePageCount'],
+                    $this->sitePageCountService->countTotalVisibleDocumentPages()
+                ),
+                $limit,
+                $statistics,
+                $totalListResultCount
             ),
             'flashMessages' => $flashMessages,
             'queueStatus' => $this->crawlQueueService->getStatus(),
         ]);
     }
 
-    private function serializeGroupedLinks(GroupedResultItemListView $groupedLinks, array $healthScore): array
+    private function normalizeResultLimit(int $limit): int
+    {
+        if ($limit <= 0) {
+            return max(1, $this->resultLimit);
+        }
+
+        return $limit;
+    }
+
+    private function serializeGroupedLinks(
+        GroupedResultItemListView $groupedLinks,
+        array $healthScore,
+        int $limit,
+        array $statistics,
+        int $totalListResultCount
+    ): array
     {
         $groups = $groupedLinks->getGroups();
+        $totalResultCount = $totalListResultCount;
+        $loadedResultCount = min($groupedLinks->getRawCount(), $totalResultCount);
+        $nextLimit = min($limit + max(1, $this->resultLimit), $totalResultCount);
+        $hasMoreResults = $totalResultCount > $loadedResultCount && $nextLimit > $limit;
 
         return [
             'groups' => $this->serializeGroups($groups, $groupedLinks->getActiveMode()),
@@ -124,7 +169,7 @@ class ModuleController extends AbstractModuleController
                     'statusCode' => $groupedLinks->getActiveStatusCode(),
                     'impact' => $groupedLinks->getActiveImpact(),
                 ], true),
-                $groupedLinks->getTargetTypeOptions()
+                $this->createTargetTypeOptionsFromStatistics($statistics)
             ),
             'domainOptions' => array_map(
                 fn (ResultItemFilterOptionView $option) => $this->serializeOption($option, [
@@ -134,7 +179,7 @@ class ModuleController extends AbstractModuleController
                     'statusCode' => $groupedLinks->getActiveStatusCode(),
                     'impact' => $groupedLinks->getActiveImpact(),
                 ], true),
-                $groupedLinks->getDomainOptions()
+                $this->createDomainOptionsFromStatistics($statistics)
             ),
             'statusOptions' => array_map(
                 fn (ResultItemFilterOptionView $option) => $this->serializeOption($option, [
@@ -144,7 +189,7 @@ class ModuleController extends AbstractModuleController
                     'statusCode' => $option->getIdentifier(),
                     'impact' => $groupedLinks->getActiveImpact(),
                 ], true),
-                $groupedLinks->getStatusOptions()
+                $this->createStatusOptionsFromStatistics($statistics)
             ),
             'impactOptions' => array_map(
                 fn (ResultItemFilterOptionView $option) => $this->serializeOption($option, [
@@ -154,21 +199,35 @@ class ModuleController extends AbstractModuleController
                     'statusCode' => $groupedLinks->getActiveStatusCode(),
                     'impact' => $option->getIdentifier(),
                 ], true),
-                $groupedLinks->getImpactOptions()
+                $this->createImpactOptionsFromStatistics($statistics)
             ),
             'resetUri' => $this->createModuleIndexUri([]),
+            'loadMoreUri' => $hasMoreResults ? $this->createModuleIndexUri([
+                'groupBy' => $groupedLinks->getActiveMode(),
+                'targetType' => $groupedLinks->getActiveTargetType(),
+                'domain' => $groupedLinks->getActiveDomain(),
+                'statusCode' => $groupedLinks->getActiveStatusCode(),
+                'impact' => $groupedLinks->getActiveImpact(),
+                'limit' => $nextLimit,
+            ]) : null,
             'healthScore' => $healthScore,
-            'summaryItems' => $this->createSummaryItems($groupedLinks),
+            'summaryItems' => $this->createSummaryItemsFromStatistics($statistics),
             'activeMode' => $groupedLinks->getActiveMode(),
             'activeTargetType' => $groupedLinks->getActiveTargetType(),
             'activeDomain' => $groupedLinks->getActiveDomain(),
             'activeStatusCode' => $groupedLinks->getActiveStatusCode(),
             'activeImpact' => $groupedLinks->getActiveImpact(),
             'rawCount' => $groupedLinks->getRawCount(),
+            'loadedResultCount' => $loadedResultCount,
+            'totalResultCount' => $totalResultCount,
+            'resultLimit' => $limit,
+            'resultLimitIncrement' => max(1, $this->resultLimit),
+            'hasMoreResults' => $hasMoreResults,
             'groupCount' => $groupedLinks->getGroupCount(),
             'hasResults' => $groupedLinks->hasResults(),
+            'hasStoredResults' => $statistics['totalRows'] > 0,
             'hasActiveFilters' => $groupedLinks->hasActiveFilters(),
-            'hasMultipleDomains' => \count($groupedLinks->getDomainOptions()) > 2,
+            'hasMultipleDomains' => \count($statistics['domainIssueCounts']) > 1,
         ];
     }
 
@@ -186,24 +245,24 @@ class ModuleController extends AbstractModuleController
         return $serializedGroups;
     }
 
-    private function createSummaryItems(GroupedResultItemListView $groupedLinks): array
+    private function createSummaryItemsFromStatistics(array $statistics): array
     {
         $summaryItems = [
             [
                 'label' => 'Groups',
                 'translationId' => 'summary.groups',
-                'value' => $groupedLinks->getGroupCount(),
+                'value' => $statistics['totalIssues'],
                 'icon' => 'fas fa-link',
             ],
             [
                 'label' => 'Rows',
                 'translationId' => 'summary.rows',
-                'value' => $groupedLinks->getRawCount(),
+                'value' => $statistics['totalRows'],
                 'icon' => 'fas fa-unlink',
             ],
         ];
 
-        foreach ($groupedLinks->getTargetTypeOptions() as $option) {
+        foreach ($this->createTargetTypeOptionsFromStatistics($statistics) as $option) {
             if ($option->getIdentifier() === 'all' || $option->getCount() === 0) {
                 continue;
             }
@@ -217,6 +276,75 @@ class ModuleController extends AbstractModuleController
         }
 
         return $summaryItems;
+    }
+
+    /**
+     * @return array<ResultItemFilterOptionView>
+     */
+    private function createTargetTypeOptionsFromStatistics(array $statistics): array
+    {
+        $counts = $statistics['targetTypeIssueCounts'];
+
+        return [
+            new ResultItemFilterOptionView('all', 'All target types', 'filter.allTargetTypes', $statistics['totalIssues']),
+            new ResultItemFilterOptionView('internalNode', 'Internal node', 'targetType.internalNode', $counts['internalNode'] ?? 0),
+            new ResultItemFilterOptionView('externalUrl', 'External URL', 'targetType.externalUrl', $counts['externalUrl'] ?? 0),
+            new ResultItemFilterOptionView('otherProtocol', 'Other protocol', 'targetType.otherProtocol', $counts['otherProtocol'] ?? 0),
+        ];
+    }
+
+    /**
+     * @return array<ResultItemFilterOptionView>
+     */
+    private function createDomainOptionsFromStatistics(array $statistics): array
+    {
+        $options = [new ResultItemFilterOptionView('all', 'All domains', 'filter.allDomains', $statistics['totalIssues'])];
+        foreach ($statistics['domainIssueCounts'] as $domain => $count) {
+            $options[] = new ResultItemFilterOptionView((string)$domain, (string)$domain, null, $count);
+        }
+
+        return $options;
+    }
+
+    /**
+     * @return array<ResultItemFilterOptionView>
+     */
+    private function createStatusOptionsFromStatistics(array $statistics): array
+    {
+        $options = [new ResultItemFilterOptionView('all', 'All statuses', 'filter.allStatuses', $statistics['totalIssues'])];
+        foreach ($statistics['statusIssueCounts'] as $statusCode => $count) {
+            $options[] = new ResultItemFilterOptionView(
+                (string)$statusCode,
+                (string)$statusCode,
+                $this->statusFilterTranslationId((string)$statusCode),
+                $count
+            );
+        }
+
+        return $options;
+    }
+
+    /**
+     * @return array<ResultItemFilterOptionView>
+     */
+    private function createImpactOptionsFromStatistics(array $statistics): array
+    {
+        $counts = $statistics['impactIssueCounts'];
+
+        return [
+            new ResultItemFilterOptionView(ResultItemGroupingService::IMPACT_ALL, 'All impact', 'filter.impact.all', $statistics['totalIssues']),
+            new ResultItemFilterOptionView(ResultItemGroupingService::IMPACT_10_PLUS, '10+ pages', 'filter.impact.10Plus', $counts[ResultItemGroupingService::IMPACT_10_PLUS] ?? 0),
+            new ResultItemFilterOptionView(ResultItemGroupingService::IMPACT_3_PLUS, '3+ pages', 'filter.impact.3Plus', $counts[ResultItemGroupingService::IMPACT_3_PLUS] ?? 0),
+            new ResultItemFilterOptionView(ResultItemGroupingService::IMPACT_LOW, '1-2 pages', 'filter.impact.low', $counts[ResultItemGroupingService::IMPACT_LOW] ?? 0),
+        ];
+    }
+
+    private function statusFilterTranslationId(string $statusCode): string
+    {
+        return match ($statusCode) {
+            '490' => 'filter.status.490',
+            default => 'error.' . $statusCode,
+        };
     }
 
     private function summaryIconForTargetType(string $targetType): string
@@ -251,6 +379,7 @@ class ModuleController extends AbstractModuleController
                 'domain' => $arguments['domain'] ?? 'all',
                 'statusCode' => $arguments['statusCode'] ?? 'all',
                 'impact' => $arguments['impact'] ?? ResultItemGroupingService::IMPACT_ALL,
+                'limit' => $arguments['limit'] ?? max(1, $this->resultLimit),
             ],
         ], '', '&', PHP_QUERY_RFC3986);
     }
