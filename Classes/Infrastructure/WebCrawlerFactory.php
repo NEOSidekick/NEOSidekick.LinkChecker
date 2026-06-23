@@ -186,7 +186,10 @@ class WebCrawlerFactory
                 RequestInterface $request,
                 ?ResponseInterface $response = null,
                 ?\Throwable $exception = null
-            ) use ($retryAttempts, $transientStatusCodes) {
+            ) use (
+                $retryAttempts,
+                $transientStatusCodes
+            ) {
                 if ($retries >= $retryAttempts) {
                     return false;
                 }
@@ -247,33 +250,68 @@ class WebCrawlerFactory
     }
 
     /**
-     * For external links we only need the status code, so issue a cheap HEAD request and add a byte
-     * range cap. Many servers wrongly reject HEAD with 403/405/501; in that case we fall back to GET.
+     * For external links we only need the status code, so issue a cheap HEAD request first. Many
+     * servers wrongly reject HEAD with 403/405/416/501; in that case we fall back to GET. The byte
+     * range cap is only applied to GET requests because several servers reject ranged HEAD probes.
      * Internal pages keep using GET because their body is required for link discovery.
      */
     private function createHeadFirstMiddleware(string $baseHost, int $externalRangeBytes): callable
     {
         return static function (callable $handler) use ($baseHost, $externalRangeBytes): callable {
-            return static function (RequestInterface $request, array $options) use ($handler, $baseHost, $externalRangeBytes) {
+            return static function (
+                RequestInterface $request,
+                array $options
+            ) use (
+                $handler,
+                $baseHost,
+                $externalRangeBytes
+            ) {
                 if (strtolower($request->getUri()->getHost()) === $baseHost) {
                     return $handler($request, $options);
-                }
-
-                if ($externalRangeBytes > 0) {
-                    // bytes=0-N always has a satisfiable start, so this never triggers a 416 response.
-                    $request = $request->withHeader('Range', 'bytes=0-' . $externalRangeBytes);
                 }
 
                 if ($request->getMethod() !== 'GET') {
                     return $handler($request, $options);
                 }
 
-                $getRequest = $request;
-                $retryWithGet = static fn () => $handler($getRequest, $options);
+                $requestWithoutRange = $request->withoutHeader('Range');
+                $getRequest = $requestWithoutRange;
+                if ($externalRangeBytes > 0) {
+                    $getRequest = $getRequest->withHeader('Range', 'bytes=0-' . $externalRangeBytes);
+                }
 
-                return $handler($request->withMethod('HEAD'), $options)->then(
+                $retryWithoutRange = static fn () => $handler($requestWithoutRange, $options);
+                $retryWithGet = static function () use (
+                    $handler,
+                    $getRequest,
+                    $options,
+                    $retryWithoutRange,
+                    $externalRangeBytes
+                ) {
+                    return $handler($getRequest, $options)->then(
+                        static function (ResponseInterface $response) use ($retryWithoutRange, $externalRangeBytes) {
+                            if ($externalRangeBytes > 0 && $response->getStatusCode() === 416) {
+                                return $retryWithoutRange();
+                            }
+
+                            return $response;
+                        },
+                        static function ($reason) use ($retryWithoutRange, $externalRangeBytes) {
+                            if ($externalRangeBytes > 0 && $reason instanceof RequestException) {
+                                $response = $reason->getResponse();
+                                if ($response instanceof ResponseInterface && $response->getStatusCode() === 416) {
+                                    return $retryWithoutRange();
+                                }
+                            }
+
+                            return Create::rejectionFor($reason);
+                        }
+                    );
+                };
+
+                return $handler($requestWithoutRange->withMethod('HEAD'), $options)->then(
                     static function (ResponseInterface $response) use ($retryWithGet) {
-                        if (in_array($response->getStatusCode(), [403, 405, 501], true)) {
+                        if (in_array($response->getStatusCode(), [403, 405, 416, 501], true)) {
                             return $retryWithGet();
                         }
                         return $response;
@@ -281,7 +319,10 @@ class WebCrawlerFactory
                     static function ($reason) use ($retryWithGet) {
                         if ($reason instanceof RequestException) {
                             $response = $reason->getResponse();
-                            if ($response instanceof ResponseInterface && in_array($response->getStatusCode(), [403, 405, 501], true)) {
+                            if (
+                                $response instanceof ResponseInterface
+                                && in_array($response->getStatusCode(), [403, 405, 416, 501], true)
+                            ) {
                                 return $retryWithGet();
                             }
                         }

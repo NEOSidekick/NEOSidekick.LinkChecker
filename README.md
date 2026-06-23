@@ -195,8 +195,8 @@ External link checks are the slow part of a crawl. Several measures keep crawls 
  - **HEAD-first**: external links only need their status, so they are checked with a cheap `HEAD`
    request (with an automatic `GET` fallback for servers that reject `HEAD`). Internal pages still
    use `GET` because their body is needed to discover links.
- - **Byte cap**: external requests carry a `Range` header and the body read is capped, so a link to
-   a huge PDF or video is never fully downloaded.
+ - **Byte cap**: external `GET` fallback requests carry a `Range` header and the body read is
+   capped, so a link to a huge PDF or video is never fully downloaded.
  - **Per-host rate limiting**: external hosts are limited to a few requests per second; the site's
    own host is governed by `concurrency`. Connections are kept alive and reused.
  - **In-run deduplication**: each unique URL is checked once per crawl, even if it appears on many
@@ -213,7 +213,7 @@ NEOSidekick:
     performance:
       maximumResponseSize: 2097152     # max body bytes read per page
       headFirst: true
-      externalRangeBytes: 65536        # Range: bytes=0-N for external requests (0 = off)
+      externalRangeBytes: 65536        # Range: bytes=0-N for external GET fallbacks (0 = off)
       perHostRequestsPerSecond: 4      # 0 = no per-host limit
       betweenRunCache:
         enabled: false

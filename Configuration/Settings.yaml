@@ -79,7 +79,7 @@ NEOSidekick:
       # Use HEAD instead of GET for external links (only their status is needed), with an automatic
       # GET fallback for servers that reject HEAD. Internal pages always use GET for link discovery.
       headFirst: true
-      # Byte range cap for external requests so a link to a huge PDF/video is not fully downloaded.
+      # Byte range cap for external GET fallback requests so a huge PDF/video is not fully downloaded.
       externalRangeBytes: 65536
       # Rate limit per external host (requests/second); 0 disables it. The site's own host is
       # governed by `concurrency` above instead.
