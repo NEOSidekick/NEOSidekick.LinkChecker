@@ -10,6 +10,8 @@ use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Mvc\Controller\ControllerContext;
+use Neos\Neos\Service\LinkingService;
+use Throwable;
 
 /**
  * @Flow\Scope("singleton")
@@ -41,6 +43,12 @@ class ResultItemViewFactory
      */
     protected $nodeDataRepository;
 
+    /**
+     * @var LinkingService
+     * @Flow\Inject
+     */
+    protected $linkingService;
+
     public function create(ResultItem $resultItem, ControllerContext $controllerContext): ResultItemView
     {
         $sourcePath = $resultItem->getSourcePath() ?? '';
@@ -52,7 +60,7 @@ class ResultItemViewFactory
             $resultItem,
             $sourceLabel,
             $sourceFrontendUri,
-            $this->createSourceEditUri($sourcePath, $controllerContext),
+            $this->createSourceEditUri($sourcePath, $resultItem->getDomain(), $controllerContext),
             $targetLabel,
             $this->createTargetUri($resultItem, $controllerContext)
         );
@@ -109,6 +117,11 @@ class ResultItemViewFactory
         string $domain,
         ControllerContext $controllerContext
     ): string {
+        $resolvedUri = $this->createResolvedSourceFrontendUri($sourcePath, $domain, $controllerContext);
+        if ($resolvedUri !== null) {
+            return $resolvedUri;
+        }
+
         if ($domain === '') {
             return '#';
         }
@@ -121,13 +134,45 @@ class ResultItemViewFactory
         return $requestUri->getScheme() . '://' . $domain . ($path === '/' ? '/' : $path);
     }
 
-    private function createSourceEditUri(string $sourcePath, ControllerContext $controllerContext): ?string
+    private function createResolvedSourceFrontendUri(
+        string $sourcePath,
+        string $domain,
+        ControllerContext $controllerContext
+    ): ?string {
+        if ($domain === '') {
+            return null;
+        }
+
+        try {
+            $uri = $this->linkingService->createNodeUri(
+                $controllerContext,
+                $this->createLiveNodeContextPath($sourcePath),
+                null,
+                null,
+                false
+            );
+        } catch (Throwable) {
+            return null;
+        }
+
+        if ($uri === '') {
+            return null;
+        }
+
+        return $this->createAbsoluteUri($controllerContext, $domain, $uri);
+    }
+
+    private function createSourceEditUri(
+        string $sourcePath,
+        string $domain,
+        ControllerContext $controllerContext
+    ): ?string
     {
         if (!$this->isNodePath($sourcePath)) {
             return null;
         }
 
-        return $this->createBackendContentUri($controllerContext, $sourcePath);
+        return $this->createBackendContentUri($controllerContext, $sourcePath, $domain);
     }
 
     private function createTargetUri(ResultItem $resultItem, ControllerContext $controllerContext): ?string
@@ -135,7 +180,7 @@ class ResultItemViewFactory
         $target = $resultItem->getTarget();
 
         if ($resultItem->getTargetPath() !== null) {
-            return $this->createBackendContentUri($controllerContext, $resultItem->getTargetPath());
+            return $this->createBackendContentUri($controllerContext, $resultItem->getTargetPath(), $resultItem->getDomain());
         }
 
         if (str_starts_with($target, 'http')) {
@@ -145,17 +190,40 @@ class ResultItemViewFactory
         return null;
     }
 
-    private function createBackendContentUri(ControllerContext $controllerContext, string $nodeContextPath): string
+    private function createBackendContentUri(
+        ControllerContext $controllerContext,
+        string $nodeContextPath,
+        string $domain
+    ): string {
+        return $this->createAbsoluteUri($controllerContext, $domain, '/neos/content?' . http_build_query([
+            'node' => $nodeContextPath,
+        ], '', '&', PHP_QUERY_RFC3986));
+    }
+
+    private function createAbsoluteUri(ControllerContext $controllerContext, string $domain, string $pathAndQuery): string
     {
         $requestUri = $controllerContext->getRequest()->getHttpRequest()->getUri();
-        $authority = $requestUri->getHost();
-        if ($requestUri->getPort() !== null) {
+        $authority = $domain !== '' ? $domain : $requestUri->getHost();
+        if (!str_contains($authority, ':') && $requestUri->getPort() !== null) {
             $authority .= ':' . $requestUri->getPort();
         }
 
-        return $requestUri->getScheme() . '://' . $authority . '/neos/content?' . http_build_query([
-            'node' => $nodeContextPath,
-        ], '', '&', PHP_QUERY_RFC3986);
+        if (str_starts_with($pathAndQuery, 'http://') || str_starts_with($pathAndQuery, 'https://')) {
+            $path = parse_url($pathAndQuery, PHP_URL_PATH) ?: '/';
+            $query = parse_url($pathAndQuery, PHP_URL_QUERY);
+            $pathAndQuery = $path . ($query !== null ? '?' . $query : '');
+        }
+
+        return $requestUri->getScheme() . '://' . $authority . '/' . ltrim($pathAndQuery, '/');
+    }
+
+    private function createLiveNodeContextPath(string $nodePath): string
+    {
+        if (str_contains($nodePath, '@')) {
+            return $nodePath;
+        }
+
+        return $nodePath . '@live';
     }
 
     private function resolveNodeLabelByPath(string $nodePath): ?string
