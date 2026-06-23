@@ -7,6 +7,7 @@ namespace NEOSidekick\LinkChecker\Controller\Backend;
 use NEOSidekick\LinkChecker\Domain\Model\ResultItem;
 use NEOSidekick\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
 use NEOSidekick\LinkChecker\Infrastructure\CrawlQueueService;
+use NEOSidekick\LinkChecker\Infrastructure\SitePageCountService;
 use NEOSidekick\LinkChecker\Presentation\GroupedResultItemListView;
 use NEOSidekick\LinkChecker\Presentation\LinkHealthScoreService;
 use NEOSidekick\LinkChecker\Presentation\ResultItemFilterOptionView;
@@ -56,6 +57,12 @@ class ModuleController extends AbstractModuleController
      */
     protected $crawlQueueService;
 
+    /**
+     * @var SitePageCountService
+     * @Flow\Inject
+     */
+    protected $sitePageCountService;
+
     public function indexAction(
         string $groupBy = ResultItemGroupingService::MODE_TARGET,
         string $targetType = 'all',
@@ -84,7 +91,10 @@ class ModuleController extends AbstractModuleController
 
         $this->view->assignMultiple([
             'links' => $links,
-            'groupedLinks' => $this->serializeGroupedLinks($groupedLinks, $this->linkHealthScoreService->create($links)),
+            'groupedLinks' => $this->serializeGroupedLinks(
+                $groupedLinks,
+                $this->linkHealthScoreService->create($links, $this->sitePageCountService->countTotalVisibleDocumentPages())
+            ),
             'flashMessages' => $flashMessages,
             'queueStatus' => $this->crawlQueueService->getStatus(),
         ]);

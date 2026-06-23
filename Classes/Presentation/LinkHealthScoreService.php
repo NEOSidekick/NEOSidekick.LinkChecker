@@ -14,11 +14,10 @@ class LinkHealthScoreService
     /**
      * @param array<ResultItemView> $links
      */
-    public function create(array $links): array
+    public function create(array $links, int $totalInternalPageCount): array
     {
         $affectedSourcePageCount = $this->countAffectedSourcePages($links);
-        $totalInternalPageCount = 0;
-        $scoreDenominator = max(100, $affectedSourcePageCount);
+        $scoreDenominator = max($totalInternalPageCount, $affectedSourcePageCount);
         $score = $scoreDenominator > 0
             ? (int)max(0, min(100, round((($scoreDenominator - $affectedSourcePageCount) / $scoreDenominator) * 100)))
             : 100;
