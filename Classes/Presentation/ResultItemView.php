@@ -87,6 +87,8 @@ final class ResultItemView
     public function isInternalTarget(): bool
     {
         $target = $this->resultItem->getTarget();
-        return str_starts_with($target, 'node://') || str_starts_with($target, '/');
+        return $this->resultItem->getTargetPath() !== null
+            || str_starts_with($target, 'node://')
+            || str_starts_with($target, '/');
     }
 }

@@ -7,9 +7,12 @@ namespace NEOSidekick\LinkChecker\Infrastructure;
 use GuzzleHttp\Client;
 use NEOSidekick\LinkChecker\Domain\Model\ResultItem;
 use NEOSidekick\LinkChecker\Domain\Model\ResultItemRepositoryInterface;
+use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\ConsoleOutput;
 use Neos\Flow\Persistence\Exception\IllegalObjectTypeException;
+use Neos\Neos\Domain\Model\Domain;
+use Neos\Neos\Domain\Repository\DomainRepository;
 use Psr\Http\Message\UriInterface;
 use Psr\Http\Message\ResponseInterface;
 use GuzzleHttp\Exception\RequestException;
@@ -38,6 +41,18 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
     protected $output;
 
     /**
+     * @var ContextFactoryInterface
+     * @Flow\Inject
+     */
+    protected $contextFactory;
+
+    /**
+     * @var DomainRepository
+     * @Flow\Inject
+     */
+    protected $domainRepository;
+
+    /**
      * @Flow\InjectConfiguration(path="excludeStatusCodes")
      */
     protected array $excludeStatusCodes = [];
@@ -50,6 +65,16 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
     protected array $pendingServerErrorResultsByTarget = [];
 
     private ?Client $revalidationClient = null;
+
+    private ?Domain $crawledDomain = null;
+
+    private array $hiddenContentContextsByHost = [];
+
+    public function setCrawledDomain(Domain $domain): void
+    {
+        $this->crawledDomain = $domain;
+        $this->hiddenContentContextsByHost = [];
+    }
 
     /**
      * Called when the crawl has ended.
@@ -270,10 +295,19 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
         string $domain,
         string $state = ResultItem::STATE_BROKEN
     ): void {
+        $sourceNode = $this->resolveInternalNodeUrl($originUrl);
+        $targetNode = $this->resolveInternalNodeUrl($crawlingUrl);
+
         $linkCheckItem = new ResultItem();
         $linkCheckItem->setDomain($domain);
-        $linkCheckItem->setSourcePath((string)$originUrl);
-        $linkCheckItem->setTarget((string)$crawlingUrl);
+        $linkCheckItem->setSource($sourceNode['identifier'] ?? null);
+        $linkCheckItem->setSourcePath($sourceNode['path'] ?? (string)$originUrl);
+        if ($targetNode !== null) {
+            $linkCheckItem->setTarget('node://' . $targetNode['identifier']);
+            $linkCheckItem->setTargetPath($targetNode['path']);
+        } else {
+            $linkCheckItem->setTarget((string)$crawlingUrl);
+        }
         $linkCheckItem->setStatusCode($statusCode);
         $linkCheckItem->setState($state);
         $linkCheckItem->setCreatedAt(new \DateTime());
@@ -286,6 +320,165 @@ class LogAndPersistResultCrawlObserver extends CrawlObserver
         }
 
         $this->resultItemsGroupedByStatusCode[$statusCode] = ($this->resultItemsGroupedByStatusCode[$statusCode] ?? 0) + 1;
+    }
+
+    /**
+     * @return array{identifier: string, path: string}|null
+     */
+    protected function resolveInternalNodeUrl(UriInterface $url): ?array
+    {
+        $domain = $this->findInternalDomainForUrl($url);
+        if ($domain === null) {
+            return null;
+        }
+
+        if (!in_array(strtolower($url->getScheme()), ['http', 'https'], true)) {
+            return null;
+        }
+
+        try {
+            $node = $this->findNodeByUriPath($this->getHiddenContentContext($domain)->getCurrentSiteNode(), $url->getPath());
+        } catch (Throwable) {
+            return null;
+        }
+
+        if ($node === null) {
+            return null;
+        }
+
+        $identifier = method_exists($node, 'getNodeAggregateIdentifier')
+            ? (string)$node->getNodeAggregateIdentifier()
+            : (method_exists($node, 'getIdentifier') ? (string)$node->getIdentifier() : '');
+        $path = method_exists($node, 'findNodePath')
+            ? (string)$node->findNodePath()
+            : (method_exists($node, 'getPath') ? (string)$node->getPath() : '');
+
+        if ($identifier === '' || $path === '') {
+            return null;
+        }
+
+        return [
+            'identifier' => $identifier,
+            'path' => $path,
+        ];
+    }
+
+    private function findInternalDomainForUrl(UriInterface $url): ?Domain
+    {
+        $host = strtolower($url->getHost());
+        if ($host === '') {
+            return null;
+        }
+
+        if ($this->crawledDomain !== null && $host === strtolower($this->crawledDomain->getHostname())) {
+            return $this->crawledDomain;
+        }
+
+        if (!$this->domainRepository instanceof DomainRepository) {
+            return null;
+        }
+
+        return $this->domainRepository->findOneByHost($host, true);
+    }
+
+    private function getHiddenContentContext(Domain $domain)
+    {
+        $host = strtolower($domain->getHostname());
+        if (!isset($this->hiddenContentContextsByHost[$host])) {
+            $this->hiddenContentContextsByHost[$host] = $this->contextFactory->create([
+                'workspaceName' => 'live',
+                'currentSite' => $domain->getSite(),
+                'currentDomain' => $domain,
+                'invisibleContentShown' => true,
+                'inaccessibleContentShown' => true,
+                'removedContentShown' => true,
+            ]);
+        }
+
+        return $this->hiddenContentContextsByHost[$host];
+    }
+
+    private function findNodeByUriPath($siteNode, string $uriPath)
+    {
+        $node = $siteNode;
+        $relativeUriPath = trim(rawurldecode($uriPath), '/');
+        if ($relativeUriPath === '') {
+            return $node;
+        }
+
+        foreach (explode('/', $relativeUriPath) as $pathSegment) {
+            $node = $this->findChildDocumentNodeByUriPathSegment($node, $pathSegment);
+            if ($node === null) {
+                return str_contains($relativeUriPath, '/')
+                    ? null
+                    : $this->findDescendantDocumentNodeByLabel($siteNode, $relativeUriPath);
+            }
+        }
+
+        return $node;
+    }
+
+    private function findChildDocumentNodeByUriPathSegment($node, string $pathSegment)
+    {
+        foreach ($this->findChildDocumentNodes($node) as $childNode) {
+            if ((string)$childNode->getProperty('uriPathSegment') === $pathSegment) {
+                return $childNode;
+            }
+        }
+
+        return null;
+    }
+
+    private function findDescendantDocumentNodeByLabel($node, string $label)
+    {
+        $normalizedLabel = $this->normalizeLabel($label);
+        if ($normalizedLabel === '') {
+            return null;
+        }
+
+        foreach ($this->findChildDocumentNodes($node) as $childNode) {
+            if ($this->documentNodeMatchesLabel($childNode, $normalizedLabel)) {
+                return $childNode;
+            }
+
+            $matchingDescendant = $this->findDescendantDocumentNodeByLabel($childNode, $label);
+            if ($matchingDescendant !== null) {
+                return $matchingDescendant;
+            }
+        }
+
+        return null;
+    }
+
+    private function findChildDocumentNodes($node): iterable
+    {
+        $childNodes = method_exists($node, 'getChildNodes')
+            ? $node->getChildNodes('Neos.Neos:Document')
+            : $node->findChildNodes();
+
+        foreach ($childNodes as $childNode) {
+            if (!$childNode->getNodeType()->isOfType('Neos.Neos:Document')) {
+                continue;
+            }
+
+            yield $childNode;
+        }
+    }
+
+    private function documentNodeMatchesLabel($node, string $normalizedLabel): bool
+    {
+        foreach (['title', 'titleOverride', 'heroTitle'] as $propertyName) {
+            if ($this->normalizeLabel((string)$node->getProperty($propertyName)) === $normalizedLabel) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function normalizeLabel(string $label): string
+    {
+        return mb_strtolower(trim(preg_replace('/\s+/', ' ', $label) ?? ''), 'UTF-8');
     }
 
     /**

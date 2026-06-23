@@ -56,6 +56,22 @@ class ResultItemViewFactoryTest extends UnitTestCase
     }
 
     /** @test */
+    public function resolvedUrlTargetUsesTargetPathForBackendUri(): void
+    {
+        $factory = $this->createFactory([
+            '/sites/lab/hidden-target' => $this->createNodeData(['title' => 'Glossar'], '/sites/lab/hidden-target'),
+        ]);
+
+        $view = $factory->create(
+            $this->createResultItem('/sites/lab/source-page', 'https://lab.neoseu.ddev.site/hidden-target', '/sites/lab/hidden-target'),
+            $this->createControllerContext()
+        );
+
+        self::assertSame('Glossar', $view->getTargetLabel());
+        self::assertSame('https://neoswebsite.ddev.site/neos/content?node=%2Fsites%2Flab%2Fhidden-target', $view->getTargetUri());
+    }
+
+    /** @test */
     public function externalCrawlerSourceKeepsStoredUrlPathAsLabel(): void
     {
         $factory = $this->createFactory([]);

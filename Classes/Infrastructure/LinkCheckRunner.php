@@ -218,6 +218,7 @@ class LinkCheckRunner
 
         foreach ($domainsToCrawl as $domainToCrawl) {
             $crawlObserver = new LogAndPersistResultCrawlObserver();
+            $crawlObserver->setCrawledDomain($domainToCrawl);
             $url = $this->uriFactory->createFromDomain($domainToCrawl);
             $crawler = $this->webCrawlerFactory->createCrawler($crawlProfile, $crawlObserver, $url->getHost());
 

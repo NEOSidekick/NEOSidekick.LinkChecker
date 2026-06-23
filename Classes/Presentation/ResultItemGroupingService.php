@@ -248,11 +248,11 @@ class ResultItemGroupingService
 
     private function targetType(ResultItemView $link): string
     {
-        $target = strtolower($link->getTargetFallbackLabel());
-
-        if (str_starts_with($target, 'node://')) {
+        if ($link->isInternalTarget()) {
             return 'internalNode';
         }
+
+        $target = strtolower($link->getTargetFallbackLabel());
 
         if (str_starts_with($target, 'http://') || str_starts_with($target, 'https://')) {
             return 'externalUrl';

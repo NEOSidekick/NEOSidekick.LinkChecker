@@ -134,7 +134,7 @@ class ResultItemViewFactory
     {
         $target = $resultItem->getTarget();
 
-        if (str_starts_with($target, 'node://') && $resultItem->getTargetPath() !== null) {
+        if ($resultItem->getTargetPath() !== null) {
             return $this->createBackendContentUri($controllerContext, $resultItem->getTargetPath());
         }
 

@@ -147,6 +147,27 @@ class ResultItemGroupingServiceTest extends UnitTestCase
     }
 
     /** @test */
+    public function resolvedSameSiteUrlTargetsAreGroupedAsInternalNodes(): void
+    {
+        $links = [
+            $this->createLink(
+                'www.neos.eu',
+                '/sites/www/source',
+                'https://www.neos.eu/hidden-parent/hidden-target',
+                404,
+                '/sites/www/hidden-parent/hidden-target'
+            ),
+        ];
+
+        $list = $this->service->group($links, ResultItemGroupingService::MODE_TARGET, 'internalNode', 'all', 'all', ResultItemGroupingService::IMPACT_ALL);
+
+        self::assertSame(1, $list->getGroupCount());
+        self::assertSame('internalNode', $list->getGroups()[0]->getTargetType());
+        self::assertSame(1, $this->countForOption($list->getTargetTypeOptions(), 'internalNode'));
+        self::assertSame(0, $this->countForOption($list->getTargetTypeOptions(), 'externalUrl'));
+    }
+
+    /** @test */
     public function statusOptionsKeepNumericLabelForTranslationFallback(): void
     {
         $links = [
@@ -190,13 +211,19 @@ class ResultItemGroupingServiceTest extends UnitTestCase
         self::assertSame(3, $mediumList->getGroups()[0]->getAffectedSourceCount());
     }
 
-    private function createLink(string $domain, string $sourcePath, string $target, int $statusCode): ResultItemView
-    {
+    private function createLink(
+        string $domain,
+        string $sourcePath,
+        string $target,
+        int $statusCode,
+        ?string $targetPath = null
+    ): ResultItemView {
         $resultItem = new ResultItem();
         $resultItem->setDomain($domain);
         $resultItem->setSource(null);
         $resultItem->setSourcePath($sourcePath);
         $resultItem->setTarget($target);
+        $resultItem->setTargetPath($targetPath);
         $resultItem->setStatusCode($statusCode);
         $resultItem->setCreatedAt(new DateTimeImmutable('2026-06-18 12:00:00'));
         $resultItem->setCheckedAt(new DateTimeImmutable('2026-06-18 13:00:00'));
