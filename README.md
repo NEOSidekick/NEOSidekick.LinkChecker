@@ -32,11 +32,12 @@ We use semantic versioning so every breaking change will increase the major-vers
 
 ### Upgrade from CodeQ.LinkChecker
 
-This package replaces `codeq/linkchecker` and ships a Flow code migration for existing projects.
-
-After changing the Composer dependency, run:
+This package replaces `codeq/linkchecker` and ships a Flow code migration for existing projects. Change the package and run the migration:
 
 ```bash
+composer remove codeq/linkchecker --no-update
+composer require neosidekick/linkchecker:^4.0 --with-all-dependencies
+
 ./flow flow:core:migrate Your.SitePackage --force
 ./flow doctrine:migrate
 ```
