@@ -60,21 +60,29 @@ final class Version20260806120000 extends AbstractMigration
             return;
         }
 
+        $fingerprintColumnWasAdded = false;
         if (!$this->columnExists('fingerprint')) {
             $this->connection->executeStatement(sprintf(
                 'ALTER TABLE %s ADD fingerprint VARCHAR(64) DEFAULT NULL AFTER statuscode',
                 self::NEW_TABLE_NAME
             ));
+            $fingerprintColumnWasAdded = true;
+        }
 
+        $fingerprintIndexExists = $this->indexExists(self::FINGERPRINT_INDEX_NAME);
+        $hasNullFingerprints = $this->columnContainsNull('fingerprint');
+        if ($fingerprintColumnWasAdded || !$fingerprintIndexExists || $hasNullFingerprints) {
             $this->backfillFingerprintsAndDeduplicate();
+        }
 
+        if ($this->columnIsNullable('fingerprint')) {
             $this->connection->executeStatement(sprintf(
                 'ALTER TABLE %s MODIFY fingerprint VARCHAR(64) NOT NULL',
                 self::NEW_TABLE_NAME
             ));
         }
 
-        if (!$this->indexExists(self::FINGERPRINT_INDEX_NAME)) {
+        if (!$fingerprintIndexExists) {
             $this->connection->executeStatement(sprintf(
                 'CREATE UNIQUE INDEX %s ON %s (fingerprint)',
                 self::FINGERPRINT_INDEX_NAME,
@@ -87,7 +95,9 @@ final class Version20260806120000 extends AbstractMigration
                 'ALTER TABLE %s ADD state VARCHAR(20) DEFAULT NULL AFTER statuscode',
                 self::NEW_TABLE_NAME
             ));
+        }
 
+        if ($this->columnContainsNull('state')) {
             $this->connection->executeStatement(sprintf(
                 'UPDATE %s SET state = :warning WHERE state IS NULL AND (statuscode IN (401, 403, 429, 490) OR (statuscode >= 300 AND statuscode < 400))',
                 self::NEW_TABLE_NAME
@@ -246,6 +256,23 @@ final class Version20260806120000 extends AbstractMigration
             'SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :tableName AND COLUMN_NAME = :columnName',
             ['tableName' => self::NEW_TABLE_NAME, 'columnName' => $columnName]
         );
+    }
+
+    private function columnIsNullable(string $columnName): bool
+    {
+        return $this->connection->fetchOne(
+            'SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :tableName AND COLUMN_NAME = :columnName',
+            ['tableName' => self::NEW_TABLE_NAME, 'columnName' => $columnName]
+        ) === 'YES';
+    }
+
+    private function columnContainsNull(string $columnName): bool
+    {
+        return (bool)$this->connection->fetchOne(sprintf(
+            'SELECT EXISTS(SELECT 1 FROM %s WHERE %s IS NULL)',
+            self::NEW_TABLE_NAME,
+            $columnName
+        ));
     }
 
     private function indexExists(string $indexName): bool
