@@ -25,7 +25,7 @@ final class Version20260619120000 extends AbstractMigration
             'Migration can only be executed safely on MySql and MariaDB.'
         );
 
-        if (!$schema->hasTable(self::TABLE_NAME)) {
+        if (!$this->tableExists()) {
             return;
         }
 
@@ -57,7 +57,7 @@ final class Version20260619120000 extends AbstractMigration
             'Migration can only be executed safely on MySql and MariaDB.'
         );
 
-        if (!$schema->hasTable(self::TABLE_NAME)) {
+        if (!$this->tableExists()) {
             return;
         }
 
@@ -74,6 +74,14 @@ final class Version20260619120000 extends AbstractMigration
         return (bool)$this->connection->fetchOne(
             'SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :tableName AND COLUMN_NAME = :columnName',
             ['tableName' => self::TABLE_NAME, 'columnName' => $columnName]
+        );
+    }
+
+    private function tableExists(): bool
+    {
+        return (bool)$this->connection->fetchOne(
+            'SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :tableName',
+            ['tableName' => self::TABLE_NAME]
         );
     }
 }

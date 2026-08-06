@@ -46,6 +46,10 @@ The code migration updates PHP namespaces, package keys, Fusion references, comm
 `CodeQ.LinkChecker` to `NEOSidekick.LinkChecker`. The Doctrine migration renames the persisted result table from
 `codeq_linkchecker_domain_model_resultitem` to `neosidekick_linkchecker_domain_model_resultitem`.
 
+Single-batch upgrades performed before this release could leave the renamed table without the `fingerprint` and
+`state` columns. After updating the package, run `./flow doctrine:migrate`; migration `Version20260806120000`
+detects and repairs this partially applied v4 schema upgrade automatically.
+
 ## Usage
 
 Configure the link checker sync in your settings, like this:

@@ -8,14 +8,15 @@ use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-final class Version20260618130000 extends AbstractMigration
+final class Version20260806120000 extends AbstractMigration
 {
-    private const TABLE_NAME = 'neosidekick_linkchecker_domain_model_resultitem';
+    private const OLD_TABLE_NAME = 'codeq_linkchecker_domain_model_resultitem';
+    private const NEW_TABLE_NAME = 'neosidekick_linkchecker_domain_model_resultitem';
     private const FINGERPRINT_INDEX_NAME = 'UNIQ_90B6CF92FC0B754A';
 
     public function getDescription(): string
     {
-        return 'Add stable fingerprints to link checker results and deduplicate existing findings';
+        return 'Repair a partially applied v4 upgrade';
     }
 
     public function up(Schema $schema): void
@@ -26,20 +27,95 @@ final class Version20260618130000 extends AbstractMigration
             'Migration can only be executed safely on MySql and MariaDB.'
         );
 
-        if (!$this->tableExists()) {
+        $oldTableExists = $this->tableExists(self::OLD_TABLE_NAME);
+        $newTableExists = $this->tableExists(self::NEW_TABLE_NAME);
+
+        if ($oldTableExists && !$newTableExists) {
+            $this->connection->executeStatement(sprintf(
+                'RENAME TABLE %s TO %s',
+                self::OLD_TABLE_NAME,
+                self::NEW_TABLE_NAME
+            ));
+        } elseif ($oldTableExists && $newTableExists) {
+            $newTableRowCount = (int)$this->connection->fetchOne(sprintf(
+                'SELECT COUNT(*) FROM %s',
+                self::NEW_TABLE_NAME
+            ));
+
+            if ($newTableRowCount === 0) {
+                $this->connection->executeStatement(sprintf('DROP TABLE %s', self::NEW_TABLE_NAME));
+                $this->connection->executeStatement(sprintf(
+                    'RENAME TABLE %s TO %s',
+                    self::OLD_TABLE_NAME,
+                    self::NEW_TABLE_NAME
+                ));
+            } else {
+                $this->write(sprintf(
+                    'Keeping non-empty "%s" as the canonical table; "%s" remains as an orphaned table.',
+                    self::NEW_TABLE_NAME,
+                    self::OLD_TABLE_NAME
+                ));
+            }
+        } elseif (!$newTableExists) {
             return;
         }
 
         if (!$this->columnExists('fingerprint')) {
             $this->connection->executeStatement(sprintf(
                 'ALTER TABLE %s ADD fingerprint VARCHAR(64) DEFAULT NULL AFTER statuscode',
-                self::TABLE_NAME
+                self::NEW_TABLE_NAME
+            ));
+
+            $this->backfillFingerprintsAndDeduplicate();
+
+            $this->connection->executeStatement(sprintf(
+                'ALTER TABLE %s MODIFY fingerprint VARCHAR(64) NOT NULL',
+                self::NEW_TABLE_NAME
             ));
         }
 
+        if (!$this->indexExists(self::FINGERPRINT_INDEX_NAME)) {
+            $this->connection->executeStatement(sprintf(
+                'CREATE UNIQUE INDEX %s ON %s (fingerprint)',
+                self::FINGERPRINT_INDEX_NAME,
+                self::NEW_TABLE_NAME
+            ));
+        }
+
+        if (!$this->columnExists('state')) {
+            $this->connection->executeStatement(sprintf(
+                'ALTER TABLE %s ADD state VARCHAR(20) DEFAULT NULL AFTER statuscode',
+                self::NEW_TABLE_NAME
+            ));
+
+            $this->connection->executeStatement(sprintf(
+                'UPDATE %s SET state = :warning WHERE state IS NULL AND (statuscode IN (401, 403, 429, 490) OR (statuscode >= 300 AND statuscode < 400))',
+                self::NEW_TABLE_NAME
+            ), ['warning' => 'warning']);
+
+            $this->connection->executeStatement(sprintf(
+                'UPDATE %s SET state = :broken WHERE state IS NULL',
+                self::NEW_TABLE_NAME
+            ), ['broken' => 'broken']);
+        }
+    }
+
+    public function down(Schema $schema): void
+    {
+        $this->abortIf(
+            $this->connection->getDatabasePlatform() instanceof AbstractPlatform
+            && $this->connection->getDatabasePlatform()->getName() !== 'mysql',
+            'Migration can only be executed safely on MySql and MariaDB.'
+        );
+
+        // Repair migrations are intentionally not reversible.
+    }
+
+    private function backfillFingerprintsAndDeduplicate(): void
+    {
         $rows = $this->connection->fetchAllAssociative(sprintf(
             'SELECT persistence_object_identifier, domain, source, sourcepath, target, targetpath, statuscode, `ignore`, createdat, checkedat FROM %s ORDER BY createdat ASC, persistence_object_identifier ASC',
-            self::TABLE_NAME
+            self::NEW_TABLE_NAME
         ));
 
         $groups = [];
@@ -55,7 +131,7 @@ final class Version20260618130000 extends AbstractMigration
 
             $this->connection->executeStatement(sprintf(
                 'UPDATE %s SET fingerprint = :fingerprint WHERE persistence_object_identifier = :identifier',
-                self::TABLE_NAME
+                self::NEW_TABLE_NAME
             ), [
                 'fingerprint' => $fingerprint,
                 'identifier' => $row['persistence_object_identifier'],
@@ -74,7 +150,7 @@ final class Version20260618130000 extends AbstractMigration
 
             $this->connection->executeStatement(sprintf(
                 'UPDATE %s SET domain = :domain, source = :source, sourcepath = :sourcepath, target = :target, targetpath = :targetpath, statuscode = :statuscode, `ignore` = :ignore, createdat = :createdat, checkedat = :checkedat, fingerprint = :fingerprint WHERE persistence_object_identifier = :identifier',
-                self::TABLE_NAME
+                self::NEW_TABLE_NAME
             ), $merged);
 
             foreach ($groupRows as $row) {
@@ -84,52 +160,11 @@ final class Version20260618130000 extends AbstractMigration
 
                 $this->connection->executeStatement(sprintf(
                     'DELETE FROM %s WHERE persistence_object_identifier = :identifier',
-                    self::TABLE_NAME
+                    self::NEW_TABLE_NAME
                 ), [
                     'identifier' => $row['persistence_object_identifier'],
                 ]);
             }
-        }
-
-        $this->connection->executeStatement(sprintf(
-            'ALTER TABLE %s MODIFY fingerprint VARCHAR(64) NOT NULL',
-            self::TABLE_NAME
-        ));
-
-        if (!$this->indexExists(self::FINGERPRINT_INDEX_NAME)) {
-            $this->connection->executeStatement(sprintf(
-                'CREATE UNIQUE INDEX %s ON %s (fingerprint)',
-                self::FINGERPRINT_INDEX_NAME,
-                self::TABLE_NAME
-            ));
-        }
-    }
-
-    public function down(Schema $schema): void
-    {
-        $this->abortIf(
-            $this->connection->getDatabasePlatform() instanceof AbstractPlatform
-            && $this->connection->getDatabasePlatform()->getName() !== 'mysql',
-            'Migration can only be executed safely on MySql and MariaDB.'
-        );
-
-        if (!$this->tableExists()) {
-            return;
-        }
-
-        if ($this->indexExists(self::FINGERPRINT_INDEX_NAME)) {
-            $this->connection->executeStatement(sprintf(
-                'DROP INDEX %s ON %s',
-                self::FINGERPRINT_INDEX_NAME,
-                self::TABLE_NAME
-            ));
-        }
-
-        if ($this->columnExists('fingerprint')) {
-            $this->connection->executeStatement(sprintf(
-                'ALTER TABLE %s DROP fingerprint',
-                self::TABLE_NAME
-            ));
         }
     }
 
@@ -197,19 +232,19 @@ final class Version20260618130000 extends AbstractMigration
         return $merged;
     }
 
+    private function tableExists(string $tableName): bool
+    {
+        return (bool)$this->connection->fetchOne(
+            'SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :tableName',
+            ['tableName' => $tableName]
+        );
+    }
+
     private function columnExists(string $columnName): bool
     {
         return (bool)$this->connection->fetchOne(
             'SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :tableName AND COLUMN_NAME = :columnName',
-            ['tableName' => self::TABLE_NAME, 'columnName' => $columnName]
-        );
-    }
-
-    private function tableExists(): bool
-    {
-        return (bool)$this->connection->fetchOne(
-            'SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :tableName',
-            ['tableName' => self::TABLE_NAME]
+            ['tableName' => self::NEW_TABLE_NAME, 'columnName' => $columnName]
         );
     }
 
@@ -217,7 +252,7 @@ final class Version20260618130000 extends AbstractMigration
     {
         return (bool)$this->connection->fetchOne(
             'SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :tableName AND INDEX_NAME = :indexName',
-            ['tableName' => self::TABLE_NAME, 'indexName' => $indexName]
+            ['tableName' => self::NEW_TABLE_NAME, 'indexName' => $indexName]
         );
     }
 

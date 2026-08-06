@@ -26,12 +26,19 @@ final class Version20260618120000 extends AbstractMigration
             'Migration can only be executed safely on MySql and MariaDB.'
         );
 
-        $this->abortIf(
-            $schema->hasTable(self::OLD_TABLE_NAME) && $schema->hasTable(self::NEW_TABLE_NAME),
-            sprintf('Both "%s" and "%s" exist. Merge or remove one table before running this migration.', self::OLD_TABLE_NAME, self::NEW_TABLE_NAME)
-        );
+        $oldTableExists = $this->tableExists(self::OLD_TABLE_NAME);
+        $newTableExists = $this->tableExists(self::NEW_TABLE_NAME);
 
-        if ($schema->hasTable(self::OLD_TABLE_NAME) && !$schema->hasTable(self::NEW_TABLE_NAME)) {
+        if ($oldTableExists && $newTableExists) {
+            $this->write(sprintf(
+                'Both "%s" and "%s" exist; skipping the rename so the repair migration can reconcile them.',
+                self::OLD_TABLE_NAME,
+                self::NEW_TABLE_NAME
+            ));
+            return;
+        }
+
+        if ($oldTableExists && !$newTableExists) {
             $this->addSql(sprintf('RENAME TABLE %s TO %s', self::OLD_TABLE_NAME, self::NEW_TABLE_NAME));
         }
     }
@@ -44,13 +51,28 @@ final class Version20260618120000 extends AbstractMigration
             'Migration can only be executed safely on MySql and MariaDB.'
         );
 
-        $this->abortIf(
-            $schema->hasTable(self::OLD_TABLE_NAME) && $schema->hasTable(self::NEW_TABLE_NAME),
-            sprintf('Both "%s" and "%s" exist. Merge or remove one table before reverting this migration.', self::OLD_TABLE_NAME, self::NEW_TABLE_NAME)
-        );
+        $oldTableExists = $this->tableExists(self::OLD_TABLE_NAME);
+        $newTableExists = $this->tableExists(self::NEW_TABLE_NAME);
 
-        if (!$schema->hasTable(self::OLD_TABLE_NAME) && $schema->hasTable(self::NEW_TABLE_NAME)) {
+        if ($oldTableExists && $newTableExists) {
+            $this->write(sprintf(
+                'Both "%s" and "%s" exist; skipping the reverse rename to avoid overwriting either table.',
+                self::OLD_TABLE_NAME,
+                self::NEW_TABLE_NAME
+            ));
+            return;
+        }
+
+        if (!$oldTableExists && $newTableExists) {
             $this->addSql(sprintf('RENAME TABLE %s TO %s', self::NEW_TABLE_NAME, self::OLD_TABLE_NAME));
         }
+    }
+
+    private function tableExists(string $tableName): bool
+    {
+        return (bool)$this->connection->fetchOne(
+            'SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :tableName',
+            ['tableName' => $tableName]
+        );
     }
 }
