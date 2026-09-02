@@ -19,6 +19,7 @@ use Neos\Flow\Mvc\Controller\ControllerContext;
 use Neos\Flow\Mvc\Routing\UriBuilder;
 use Neos\Flow\Tests\UnitTestCase;
 use Neos\Neos\Service\LinkingService;
+use Neos\Neos\Service\UserService;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
@@ -69,7 +70,7 @@ class ResultItemViewFactoryTest extends UnitTestCase
         );
 
         self::assertSame('Glossar', $view->getTargetLabel());
-        self::assertSame('https://lab.neoseu.ddev.site/neos/content?node=%2Fsites%2Flab%2Fhidden-target', $view->getTargetUri());
+        self::assertSame('https://lab.neoseu.ddev.site/neos/content?node=%2Fsites%2Flab%2Fhidden-target%40user-editor', $view->getTargetUri());
     }
 
     /** @test */
@@ -113,7 +114,7 @@ class ResultItemViewFactoryTest extends UnitTestCase
 
         self::assertSame('https://beatemeinl.neoseu.ddev.site/die-eu/einfach-unnoetig', $view->getSourceFrontendUri());
         self::assertSame(
-            'https://beatemeinl.neoseu.ddev.site/neos/content?node=%2Fsites%2Fbeatemeinl%2Fsource-page',
+            'https://beatemeinl.neoseu.ddev.site/neos/content?node=%2Fsites%2Fbeatemeinl%2Fsource-page%40user-editor',
             $view->getSourceEditUri()
         );
     }
@@ -137,7 +138,26 @@ class ResultItemViewFactoryTest extends UnitTestCase
         );
 
         self::assertSame(
-            'https://beatemeinl.neoseu.ddev.site/neos/content?node=%2Fsites%2Fbeatemeinl%2Fhidden-target',
+            'https://beatemeinl.neoseu.ddev.site/neos/content?node=%2Fsites%2Fbeatemeinl%2Fhidden-target%40user-editor',
+            $view->getTargetUri()
+        );
+    }
+
+    /** @test */
+    public function targetEditUriKeepsContentDimensionsInPersonalWorkspace(): void
+    {
+        $targetContextPath = '/sites/lab/hidden-target@live;language=de&market=at';
+        $factory = $this->createFactory([
+            $targetContextPath => $this->createNodeData(['title' => 'Hidden Target'], '/sites/lab/hidden-target'),
+        ]);
+
+        $view = $factory->create(
+            $this->createResultItem('/sites/lab/source-page', 'node://target-node-id', $targetContextPath),
+            $this->createControllerContext()
+        );
+
+        self::assertSame(
+            'https://lab.neoseu.ddev.site/neos/content?node=%2Fsites%2Flab%2Fhidden-target%40user-editor%3Blanguage%3Dde%26market%3Dat',
             $view->getTargetUri()
         );
     }
@@ -187,10 +207,17 @@ class ResultItemViewFactoryTest extends UnitTestCase
             ->method('createNodeUri')
             ->willReturnCallback(static fn (ControllerContext $controllerContext, string $node) => $nodeUrisByContextPath[$node] ?? '/');
 
+        $userService = $this->getMockBuilder(UserService::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getPersonalWorkspaceName'])
+            ->getMock();
+        $userService->method('getPersonalWorkspaceName')->willReturn('user-editor');
+
         $factory = new ResultItemViewFactory();
         $this->inject($factory, 'contextFactory', $contextFactory);
         $this->inject($factory, 'nodeDataRepository', $nodeDataRepository);
         $this->inject($factory, 'linkingService', $linkingService);
+        $this->inject($factory, 'userService', $userService);
 
         return $factory;
     }

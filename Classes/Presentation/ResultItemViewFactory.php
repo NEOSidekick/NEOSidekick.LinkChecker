@@ -8,9 +8,11 @@ use NEOSidekick\LinkChecker\Domain\Model\ResultItem;
 use Neos\ContentRepository\Domain\Model\NodeData;
 use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
+use Neos\ContentRepository\Domain\Utility\NodePaths;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Mvc\Controller\ControllerContext;
 use Neos\Neos\Service\LinkingService;
+use Neos\Neos\Service\UserService;
 use Throwable;
 
 /**
@@ -48,6 +50,12 @@ class ResultItemViewFactory
      * @Flow\Inject
      */
     protected $linkingService;
+
+    /**
+     * @var UserService
+     * @Flow\Inject
+     */
+    protected $userService;
 
     public function create(ResultItem $resultItem, ControllerContext $controllerContext): ResultItemView
     {
@@ -196,8 +204,23 @@ class ResultItemViewFactory
         string $domain
     ): string {
         return $this->createAbsoluteUri($controllerContext, $domain, '/neos/content?' . http_build_query([
-            'node' => $nodeContextPath,
+            'node' => $this->createPersonalWorkspaceNodeContextPath($nodeContextPath),
         ], '', '&', PHP_QUERY_RFC3986));
+    }
+
+    private function createPersonalWorkspaceNodeContextPath(string $nodeContextPath): string
+    {
+        $workspaceName = $this->userService->getPersonalWorkspaceName();
+        if ($workspaceName === null) {
+            return $nodeContextPath;
+        }
+
+        $nodePathAndContext = NodePaths::explodeContextPath($nodeContextPath);
+        return NodePaths::generateContextPath(
+            $nodePathAndContext['nodePath'],
+            $workspaceName,
+            $nodePathAndContext['dimensions']
+        );
     }
 
     private function createAbsoluteUri(ControllerContext $controllerContext, string $domain, string $pathAndQuery): string
