@@ -3,6 +3,10 @@ prototype(NEOSidekick.LinkChecker:Backend.Module.Index) < prototype(Neos.Fusion:
     groupedLinks = null
     queueStatus = null
 
+    logoUri = Neos.Fusion:ResourceUri {
+        path = 'resource://NEOSidekick.LinkChecker/Public/Images/neosidekick-logo.svg'
+    }
+
     runAction = Neos.Fusion:UriBuilder {
         action = 'run'
     }
@@ -27,7 +31,9 @@ prototype(NEOSidekick.LinkChecker:Backend.Module.Index) < prototype(Neos.Fusion:
                         {I18n.translate('NEOSidekick.LinkChecker:Modules:action.run')}
                     </Neos.Fusion.Form:Button>
                 </Neos.Fusion.Form:Form>
-                <a class="link-checker-footer__credit" href="https://neosidekick.com/" target="_blank" rel="noopener noreferrer">Developmed by NEOSidekick</a>
+                <a class="link-checker-footer__credit" href="https://neosidekick.com/" target="_blank" rel="noopener noreferrer">
+                    <img src={props.logoUri} alt="NEOSidekick" width="118" height="28" />
+                </a>
             </div>
         </div>
     `
